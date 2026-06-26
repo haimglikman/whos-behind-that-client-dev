@@ -1,4 +1,4 @@
-### v1.13.0 (client) | Server: v1.17.0 | Admin: v2.11.0
+### v1.13.0 (client) | Server: v1.17.1 | Admin: v2.11.0
 
 - New Investigate tab (between History and FAQ) — cross-analyze posts to detect connections and narrative patterns
 - Investigate basket — persistent across sessions, add/remove posts, clear when done
