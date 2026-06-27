@@ -1038,7 +1038,7 @@ const ENTITY_RELATIONS = {
 // ─────────────────────────────────────────────
 // CONFIG
 // ─────────────────────────────────────────────
-const CLIENT_VERSION = '1.14.0';
+const CLIENT_VERSION = '1.14.1';
 const SERVER_URL = 'https://DEV-SERVER-URL-HERE.onrender.com';
 const DAILY_LIMIT = 10;
 const CONTACT_EMAIL = 'contact@whosbehindthat.com'; // replace with real email
@@ -1960,7 +1960,10 @@ function renderClientBasket() {
   if (basket.length === 0) { el.innerHTML = '<div style="font-size:12px;color:var(--text3);padding:6px 0">No posts added yet.</div>'; return; }
   el.innerHTML = basket.map(function(e) {
     const d = e.ts ? new Date(e.ts) : null;
-    return '<div style="display:flex;align-items:center;gap:8px;padding:6px 0;border-top:1px solid var(--border);font-size:12px">' +
+    const topEntity = (e.topMatches||[])[0] || e.overallLabel || '—';
+    const excerpt = (e.postText||'').slice(0,180).replace(/</g,'&lt;');
+    const tooltip = escHtml(topEntity) + ' · ' + (e.overallScore||0) + '%' + (e.postText ? '&#10;&#10;"' + excerpt + (e.postText.length > 180 ? '…' : '') + '"' : '');
+    return '<div style="display:flex;align-items:center;gap:8px;padding:6px 0;border-top:1px solid var(--border);font-size:12px" title="' + tooltip + '">' +
       '<button onclick="removeFromClientInvestigation(\'' + escHtml(e.scanId) + '\')" style="background:none;border:none;color:var(--text3);cursor:pointer;font-size:14px;padding:0 4px">×</button>' +
       '<span style="font-family:var(--mono);font-size:10px;color:var(--text3)">' + escHtml(e.scanId) + '</span>' +
       '<span style="flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:var(--text2)">' + escHtml(e.url||'') + '</span>' +
@@ -2016,10 +2019,11 @@ function renderClientClusters() {
     el.innerHTML = clusters.map(function(c) {
       const d = c.ts ? new Date(c.ts) : null;
       const dateStr = d ? d.toLocaleDateString() + ' ' + d.toLocaleTimeString([],{hour:'2-digit',minute:'2-digit'}) : '—';
-      return '<div class="card" style="margin-bottom:10px">' +
+      return '<div class="card" style="margin-bottom:10px;cursor:pointer" onclick="openClientClusterFromHistory(' + JSON.stringify(JSON.stringify(c)) + ')">' +
         '<div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-bottom:6px">' +
           '<span style="font-family:var(--mono);font-size:9px;color:var(--text3)">' + escHtml(c.id) + '</span>' +
           '<span style="font-size:10px;color:var(--text3);margin-left:auto">' + dateStr + '</span>' +
+          '<span style="font-size:10px;color:var(--blue)">view →</span>' +
         '</div>' +
         '<div style="font-size:13px;font-weight:700;color:var(--text);margin-bottom:6px">' + escHtml(c.clusterName||'Unnamed cluster') + '</div>' +
         (c.synopsis ? '<p style="font-size:12px;color:var(--text2);line-height:1.7;margin-bottom:8px">' + escHtml(c.synopsis) + '</p>' : '') +
@@ -2031,6 +2035,43 @@ function renderClientClusters() {
       '</div>';
     }).join('');
   });
+}
+
+function openClientClusterFromHistory(clusterJson) {
+  const c = JSON.parse(clusterJson);
+  // Navigate to investigate tab and show full analysis
+  showPage('investigate', document.getElementById('nav-investigate'));
+  setMobileTab('investigate');
+  const resultsEl = document.getElementById('client-investigate-results');
+  if (!resultsEl) return;
+
+  const summaries = c.postSummaries || [];
+  const color = CLIENT_CLUSTER_COLORS[0];
+  let html = '';
+
+  // Synopsis card
+  html += '<div class="card" style="margin-bottom:10px">';
+  html += '<div style="display:flex;align-items:center;gap:8px;margin-bottom:8px">';
+  html += '<span style="background:' + color.bg + ';color:' + color.text + ';border:1px solid ' + color.border + ';border-radius:99px;padding:2px 10px;font-size:10px;font-weight:700">' + escHtml(c.clusterName||'Cluster') + '</span>';
+  if (c.connectionType) html += '<span style="font-size:10px;color:var(--text3);margin-left:auto;font-style:italic">' + escHtml(c.connectionType) + '</span>';
+  html += '</div>';
+  html += '<p style="font-size:12px;line-height:1.7;color:var(--text2);margin-bottom:8px">' + escHtml(c.synopsis||'') + '</p>';
+  if (c.dominantEntity) html += '<div style="font-size:11px;color:var(--text3);font-weight:600;margin-bottom:8px">Serves: <span style="color:var(--text2)">' + escHtml(c.dominantEntity) + '</span></div>';
+  if (summaries.length > 0) {
+    html += '<div style="border-top:1px solid var(--border);padding-top:8px;margin-top:4px">';
+    html += '<div style="font-size:10px;font-weight:700;color:var(--text3);text-transform:uppercase;letter-spacing:.07em;margin-bottom:6px">Posts</div>';
+    summaries.forEach(function(s) {
+      if (!s) return;
+      html += '<div style="font-size:11px;color:var(--text2);padding:4px 0;border-top:1px solid var(--border);font-style:italic">' + escHtml(s) + '</div>';
+    });
+    html += '</div>';
+  }
+  if (c.frame) html += '<div style="font-size:10px;color:var(--text3);margin-top:8px">Frame: ' + escHtml(c.frame) + '</div>';
+  if (c.event) html += '<div style="font-size:10px;color:var(--text3)">Event: ' + escHtml(c.event) + '</div>';
+  html += '<div style="font-size:9px;color:var(--text3);margin-top:6px;font-family:var(--mono)">' + escHtml(c.id) + '</div>';
+  html += '</div>';
+
+  resultsEl.innerHTML = html;
 }
 
 const CLIENT_CLUSTER_COLORS = [
@@ -2046,6 +2087,8 @@ async function runClientInvestigation() {
   const resultsEl = document.getElementById('client-investigate-results');
   btn.disabled = true; btn.textContent = 'Running...';
   resultsEl.innerHTML = '<div class="card" style="text-align:center;padding:20px"><div style="font-size:12px;color:var(--text3)">Detecting connections...</div></div>';
+  // Auto-clear investigate buttons (#5)
+  document.querySelectorAll('[id^="inv-btn-"]').forEach(function(b){ b.textContent = '+ Investigate'; b.style.background = 'var(--blue-dim)'; b.style.color = 'var(--blue)'; });
   try {
     const detectRes = await fetch(SERVER_URL + '/investigate/detect', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({ posts: basket }) });
     if (!detectRes.ok) throw new Error('Detection failed: ' + detectRes.status);
@@ -2060,9 +2103,13 @@ async function runClientInvestigation() {
       return fetch(SERVER_URL + '/investigate/synthesize', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({ cluster, posts: basket }) }).then(function(r){ return r.json(); });
     }));
     const results = syntheses.map(function(r, i){ return r.status === 'fulfilled' ? r.value.synthesis : { clusterName: 'Cluster ' + (i+1), synopsis: 'Synthesis failed.', postIds: clusters[i] }; });
-    const sorted = basket.slice().sort(function(a,b){ return new Date(a.ts||0) - new Date(b.ts||0); });
     const postMap = {};
     basket.forEach(function(p){ postMap[p.scanId] = p; });
+    // Attach postSummaries to posts (#3)
+    results.forEach(function(s) {
+      if (!s.postSummaries || !s.postIds) return;
+      s.postIds.forEach(function(scanId, i) { if (postMap[scanId]) postMap[scanId]._summary = s.postSummaries[i] || ''; });
+    });
     const postClusterMap = {};
     clusters.forEach(function(cluster, ci){ cluster.forEach(function(id){ if (!postClusterMap[id]) postClusterMap[id] = []; postClusterMap[id].push(ci); }); });
     let html = '';
@@ -2074,7 +2121,18 @@ async function runClientInvestigation() {
       if (s.connectionType) html += '<span style="font-size:10px;color:var(--text3);margin-left:auto;font-style:italic">' + escHtml(s.connectionType) + '</span>';
       html += '</div>';
       html += '<p style="font-size:12px;line-height:1.7;color:var(--text2);margin-bottom:8px">' + escHtml(s.synopsis||'') + '</p>';
-      if (s.dominantEntity) html += '<div style="font-size:11px;color:var(--text3);font-weight:600">Serves: <span style="color:var(--text2)">' + escHtml(s.dominantEntity) + '</span></div>';
+      if (s.dominantEntity) html += '<div style="font-size:11px;color:var(--text3);font-weight:600;margin-bottom:8px">Serves: <span style="color:var(--text2)">' + escHtml(s.dominantEntity) + '</span></div>';
+      // Post summaries (#3)
+      if (s.postSummaries && s.postSummaries.length > 0) {
+        html += '<div style="border-top:1px solid var(--border);padding-top:8px;margin-top:4px">';
+        html += '<div style="font-size:10px;font-weight:700;color:var(--text3);text-transform:uppercase;letter-spacing:.07em;margin-bottom:6px">Posts</div>';
+        (s.postIds||[]).forEach(function(scanId, pi) {
+          const summary = (s.postSummaries||[])[pi] || '';
+          if (!summary) return;
+          html += '<div style="font-size:11px;color:var(--text2);padding:4px 0;border-top:1px solid var(--border);font-style:italic">' + escHtml(summary) + '</div>';
+        });
+        html += '</div>';
+      }
       html += '</div>';
     });
     // Excluded
