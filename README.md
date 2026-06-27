@@ -1,3 +1,9 @@
+### v1.14.1 (client-dev) | Server: v1.18.1 | Admin: v2.12.1
+- Basket: hovering a post shows tooltip with entity, score and post excerpt
+- Synopsis cards: post summaries shown below synopsis for each post in cluster
+- Clusters history: each cluster is clickable — opens full synopsis view in Investigate tab
+- Investigate: buttons auto-clear after Run investigation is pressed
+
 ### v1.14.0 (client-dev) | Server: v1.18.0 | Admin: v2.12.0
 - Renamed "My history" to "Post history" throughout
 - New Clusters history tab (between Investigate and FAQ) — shows all previous cluster analyses
