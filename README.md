@@ -1,3 +1,9 @@
+### v1.14.2 — bug fix (client-dev) | Server: v1.18.1 | Admin: v2.12.2
+- Added full cluster visualization to investigate results — timeline SVG with color-coded nodes, connection arcs, cluster labels, split-ring for multi-cluster posts, and legend with post summaries (mirrors admin)
+- Timeline: same-date posts sit side by side with horizontal offset; date labels skip when too close; entity titles constrained to node width
+- Clusters history: view button now works — fixed double JSON.stringify bug
+- Clusters history → full view now includes timeline and legend reconstructed from saved post data
+
 ### v1.14.1 (client-dev) | Server: v1.18.1 | Admin: v2.12.1
 - Basket: hovering a post shows tooltip with entity, score and post excerpt
 - Synopsis cards: post summaries shown below synopsis for each post in cluster
