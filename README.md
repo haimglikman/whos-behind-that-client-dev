@@ -1,3 +1,8 @@
+### v1.14.0 (client-dev) | Server: v1.18.0 | Admin: v2.12.0
+- Renamed "My history" to "Post history" throughout
+- New Clusters history tab (between Investigate and FAQ) — shows all previous cluster analyses
+- Investigation: clusters now saved to server DB after synthesis with auto-generated cluster ID
+
 ### v1.13.0 (client) | Server: v1.17.1 | Admin: v2.11.0
 
 - New Investigate tab (between History and FAQ) — cross-analyze posts to detect connections and narrative patterns
