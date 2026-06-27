@@ -1038,7 +1038,7 @@ const ENTITY_RELATIONS = {
 // ─────────────────────────────────────────────
 // CONFIG
 // ─────────────────────────────────────────────
-const CLIENT_VERSION = '1.14.1';
+const CLIENT_VERSION = '1.14.2';
 const SERVER_URL = 'https://DEV-SERVER-URL-HERE.onrender.com';
 const DAILY_LIMIT = 10;
 const CONTACT_EMAIL = 'contact@whosbehindthat.com'; // replace with real email
@@ -2016,10 +2016,11 @@ function renderClientClusters() {
       el.innerHTML = '<div style="font-size:12px;color:var(--text3);padding:20px 0">No cluster analyses yet. Run an investigation to see results here.</div>';
       return;
     }
-    el.innerHTML = clusters.map(function(c) {
+    window._wbtClientClustersCache = clusters;
+    el.innerHTML = clusters.map(function(c, idx) {
       const d = c.ts ? new Date(c.ts) : null;
       const dateStr = d ? d.toLocaleDateString() + ' ' + d.toLocaleTimeString([],{hour:'2-digit',minute:'2-digit'}) : '—';
-      return '<div class="card" style="margin-bottom:10px;cursor:pointer" onclick="openClientClusterFromHistory(' + JSON.stringify(JSON.stringify(c)) + ')">' +
+      return '<div class="card" style="margin-bottom:10px;cursor:pointer" onclick="openClientClusterFromHistory(' + idx + ')">' +
         '<div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-bottom:6px">' +
           '<span style="font-family:var(--mono);font-size:9px;color:var(--text3)">' + escHtml(c.id) + '</span>' +
           '<span style="font-size:10px;color:var(--text3);margin-left:auto">' + dateStr + '</span>' +
@@ -2037,9 +2038,9 @@ function renderClientClusters() {
   });
 }
 
-function openClientClusterFromHistory(clusterJson) {
-  const c = JSON.parse(clusterJson);
-  // Navigate to investigate tab and show full analysis
+function openClientClusterFromHistory(idx) {
+  const c = (window._wbtClientClustersCache || [])[idx];
+  if (!c) return;
   showPage('investigate', document.getElementById('nav-investigate'));
   setMobileTab('investigate');
   const resultsEl = document.getElementById('client-investigate-results');
@@ -2047,7 +2048,19 @@ function openClientClusterFromHistory(clusterJson) {
 
   const summaries = c.postSummaries || [];
   const color = CLIENT_CLUSTER_COLORS[0];
+
+  // Reconstruct posts from local history by matching scan IDs
+  const h = getHistory();
+  const posts = (c.postIds||[]).map(function(scanId, i) {
+    const found = h.find(function(e){ return e.scanId === scanId; });
+    return Object.assign({}, found || { scanId: scanId, url: scanId, postText: '', topMatches: [], overallScore: 0 }, { _summary: summaries[i] || '' });
+  });
+  const postClusterMap = {};
+  (c.postIds||[]).forEach(function(id){ postClusterMap[id] = [0]; });
+
   let html = '';
+  html += renderClientTimeline(posts, [c.postIds||[]], [], postClusterMap, []);
+  html += renderClientLegend(posts, [c.postIds||[]], [], postClusterMap);
 
   // Synopsis card
   html += '<div class="card" style="margin-bottom:10px">';
@@ -2080,6 +2093,164 @@ const CLIENT_CLUSTER_COLORS = [
   { bg:'#faeeda', border:'#ba7517', text:'#ba7517' },
   { bg:'#fbeaf0', border:'#993556', text:'#993556' },
 ];
+// ─── CLIENT TIMELINE + LEGEND (mirrors admin) ───
+function renderClientTimeline(basket, clusters, isolated, postClusterMap, connections) {
+  if (!basket || basket.length === 0) return '';
+  const sorted = basket.slice().sort(function(a,b){ return new Date(a.ts||0) - new Date(b.ts||0); });
+  const W = 560, H = 230, PAD = 36, BOTTOM = 175, nodeR = 17;
+  const times = sorted.map(function(p){ return new Date(p.ts||0).getTime(); });
+  const tMin = Math.min.apply(null,times), tMax = Math.max.apply(null,times);
+  const tRange = tMax - tMin || 1;
+
+  // Group posts by date for same-date offset
+  const dateGroups = {};
+  sorted.forEach(function(p) {
+    const d = p.ts ? new Date(p.ts) : new Date(0);
+    const key = d.toLocaleDateString('en-GB',{day:'2-digit',month:'short'});
+    if (!dateGroups[key]) dateGroups[key] = [];
+    dateGroups[key].push(p.scanId);
+  });
+
+  function xOf(p) {
+    const d = p.ts ? new Date(p.ts) : new Date(0);
+    const key = d.toLocaleDateString('en-GB',{day:'2-digit',month:'short'});
+    const group = dateGroups[key];
+    const idx = group.indexOf(p.scanId);
+    const baseX = PAD + (d.getTime() - tMin) / tRange * (W - 2*PAD);
+    const offset = group.length > 1 ? (idx - (group.length-1)/2) * (nodeR*2 + 4) : 0;
+    return baseX + offset;
+  }
+  function yOf(scanId) {
+    const cis = postClusterMap[scanId];
+    if (!cis || cis.length === 0) return BOTTOM - 18;
+    return BOTTOM - 72 - (cis[0] * 18);
+  }
+
+  let svg = '<div class="card" style="padding:12px 14px 10px;margin-bottom:10px;overflow:visible"><svg width="100%" viewBox="0 0 ' + W + ' ' + H + '" style="overflow:visible">';
+
+  // Axis
+  svg += '<line x1="' + PAD + '" y1="' + BOTTOM + '" x2="' + (W-PAD) + '" y2="' + BOTTOM + '" stroke="var(--border)" stroke-width="1"/>';
+
+  // Date ticks — deduplicate, skip if too close
+  const shownDates = new Set();
+  let lastLabelX = -999;
+  const MIN_GAP = 48;
+  sorted.forEach(function(p) {
+    const d = p.ts ? new Date(p.ts) : null;
+    if (!d) return;
+    const dateKey = d.toLocaleDateString('en-GB',{day:'2-digit',month:'short'});
+    if (!shownDates.has(dateKey)) {
+      shownDates.add(dateKey);
+      const baseX = PAD + (d.getTime() - tMin) / tRange * (W - 2*PAD);
+      svg += '<line x1="' + baseX + '" y1="' + (BOTTOM-3) + '" x2="' + baseX + '" y2="' + (BOTTOM+3) + '" stroke="var(--border)" stroke-width="1"/>';
+      if (baseX - lastLabelX >= MIN_GAP) {
+        svg += '<text font-family="Nunito,sans-serif" font-size="9" fill="var(--text3)" x="' + baseX + '" y="' + (BOTTOM+13) + '" text-anchor="middle">' + dateKey + '</text>';
+        lastLabelX = baseX;
+      }
+    }
+  });
+
+  // Connection arcs
+  connections.forEach(function(conn) {
+    const pa = sorted.find(function(p){ return p.scanId === conn.postA; });
+    const pb = sorted.find(function(p){ return p.scanId === conn.postB; });
+    if (!pa || !pb) return;
+    const x1 = xOf(pa), x2 = xOf(pb);
+    const y1 = yOf(conn.postA), y2 = yOf(conn.postB);
+    const cis = postClusterMap[conn.postA] || [];
+    const color = cis.length > 0 ? CLIENT_CLUSTER_COLORS[cis[0] % CLIENT_CLUSTER_COLORS.length].border : 'var(--border)';
+    const cx = (x1+x2)/2, cy = Math.min(y1,y2) - 24;
+    svg += '<path d="M' + x1 + ' ' + y1 + ' Q ' + cx + ' ' + cy + ' ' + x2 + ' ' + y2 + '" fill="none" stroke="' + color + '" stroke-width="1.4" stroke-dasharray="5 4"/>';
+  });
+
+  // Cluster label pills
+  clusters.forEach(function(cluster, ci) {
+    const color = CLIENT_CLUSTER_COLORS[ci % CLIENT_CLUSTER_COLORS.length];
+    const clusterPs = cluster.map(function(id){ return sorted.find(function(p){ return p.scanId === id; }); }).filter(Boolean);
+    if (clusterPs.length < 2) return;
+    const xs = clusterPs.map(xOf);
+    const midX = (Math.min.apply(null,xs) + Math.max.apply(null,xs)) / 2;
+    const topY = yOf(cluster[0]) - 42;
+    svg += '<rect x="' + (midX-28) + '" y="' + (topY-7) + '" width="56" height="14" rx="7" fill="' + color.bg + '" stroke="' + color.border + '" stroke-width="0.5"/>';
+    svg += '<text font-family="Nunito,sans-serif" font-size="7" font-weight="700" fill="' + color.text + '" x="' + midX + '" y="' + (topY+3) + '" text-anchor="middle" letter-spacing="0.4">CLUSTER ' + String.fromCharCode(65+ci) + '</text>';
+  });
+
+  // Post nodes
+  sorted.forEach(function(p) {
+    const x = xOf(p), y = yOf(p.scanId);
+    const cis = postClusterMap[p.scanId] || [];
+    const isIsolated = cis.length === 0;
+    const isMulti = cis.length > 1;
+    const idx = sorted.indexOf(p) + 1;
+
+    if (isMulti) {
+      const c0 = CLIENT_CLUSTER_COLORS[cis[0] % CLIENT_CLUSTER_COLORS.length];
+      const c1 = CLIENT_CLUSTER_COLORS[cis[1] % CLIENT_CLUSTER_COLORS.length];
+      svg += '<path d="M' + x + ' ' + (y-nodeR) + ' A ' + nodeR + ' ' + nodeR + ' 0 0 1 ' + x + ' ' + (y+nodeR) + '" fill="none" stroke="' + c1.border + '" stroke-width="4"/>';
+      svg += '<path d="M' + x + ' ' + (y-nodeR) + ' A ' + nodeR + ' ' + nodeR + ' 0 0 0 ' + x + ' ' + (y+nodeR) + '" fill="none" stroke="' + c0.border + '" stroke-width="4"/>';
+      svg += '<circle cx="' + x + '" cy="' + y + '" r="' + (nodeR-4) + '" fill="white"/>';
+      svg += '<rect x="' + (x-20) + '" y="' + (y-nodeR-13) + '" width="40" height="11" rx="5" fill="#1e293b"/>';
+      svg += '<text font-family="Nunito,sans-serif" font-size="7" font-weight="700" fill="#fff" x="' + x + '" y="' + (y-nodeR-4) + '" text-anchor="middle">2 clusters</text>';
+    } else if (isIsolated) {
+      svg += '<circle cx="' + x + '" cy="' + y + '" r="' + nodeR + '" fill="#f1efe8" stroke="#b4b2a9" stroke-width="1"/>';
+    } else {
+      const color = CLIENT_CLUSTER_COLORS[cis[0] % CLIENT_CLUSTER_COLORS.length];
+      svg += '<circle cx="' + x + '" cy="' + y + '" r="' + nodeR + '" fill="' + color.bg + '" stroke="' + color.border + '" stroke-width="1.5"/>';
+    }
+
+    const textColor = isMulti ? '#1e293b' : isIsolated ? '#888780' : CLIENT_CLUSTER_COLORS[cis[0] % CLIENT_CLUSTER_COLORS.length].text;
+    svg += '<text font-family="Nunito,sans-serif" font-size="10" font-weight="700" fill="' + textColor + '" x="' + x + '" y="' + (y-3) + '" text-anchor="middle">P' + idx + '</text>';
+    svg += '<text font-family="Nunito,sans-serif" font-size="8" fill="' + textColor + '" x="' + x + '" y="' + (y+9) + '" text-anchor="middle">' + (p.overallScore||0) + '%</text>';
+    const title = (p._summary || (p.topMatches||[])[0] || '').slice(0, 16);
+    const titleWidth = nodeR * 2 + 6;
+    svg += '<text font-family="Nunito,sans-serif" font-size="8" fill="var(--text3)" x="' + x + '" y="' + (BOTTOM+24) + '" text-anchor="middle" textLength="' + titleWidth + '" lengthAdjust="spacing">' + escHtml(title) + '</text>';
+  });
+
+  svg += '</svg></div>';
+  return svg;
+}
+
+function renderClientLegend(basket, clusters, isolated, postClusterMap) {
+  const sorted = basket.slice().sort(function(a,b){ return new Date(a.ts||0) - new Date(b.ts||0); });
+  const includedIds = clusters.flat();
+  let html = '<div class="card" style="padding:10px 14px;margin-bottom:10px">';
+  html += '<div style="font-size:10px;font-weight:700;color:var(--text3);text-transform:uppercase;letter-spacing:.1em;margin-bottom:8px">Legend</div>';
+
+  if (includedIds.length > 0) {
+    html += '<div style="font-size:10px;font-weight:700;color:var(--text3);margin-bottom:5px;text-transform:uppercase;letter-spacing:.06em">Included</div>';
+    sorted.filter(function(p){ return includedIds.includes(p.scanId); }).forEach(function(p) {
+      const cis = postClusterMap[p.scanId] || [];
+      const idx = sorted.indexOf(p) + 1;
+      const color = cis.length > 0 ? CLIENT_CLUSTER_COLORS[cis[0] % CLIENT_CLUSTER_COLORS.length] : CLIENT_CLUSTER_COLORS[0];
+      const d = p.ts ? new Date(p.ts) : null;
+      html += '<div style="padding:6px 0;border-top:1px solid var(--border)">';
+      html += '<div style="display:flex;align-items:center;gap:8px;font-size:12px">';
+      html += '<span style="display:inline-flex;align-items:center;justify-content:center;width:20px;height:20px;border-radius:50%;background:' + color.bg + ';border:1.5px solid ' + color.border + ';font-size:9px;font-weight:700;color:' + color.text + ';flex-shrink:0">P' + idx + '</span>';
+      html += '<span style="font-weight:700;color:var(--text);font-size:11px">' + escHtml((p.topMatches||[])[0] || p.overallLabel || '') + '</span>';
+      html += '<span style="font-family:var(--mono);font-size:10px;font-weight:700;color:' + color.text + ';background:' + color.bg + ';border:1px solid ' + color.border + ';border-radius:99px;padding:1px 7px">' + (p.overallScore||0) + '%</span>';
+      if (d) html += '<span style="font-size:10px;color:var(--text3);margin-left:auto">' + d.toLocaleDateString() + '</span>';
+      html += '</div>';
+      if (p._summary) html += '<div style="font-size:11px;color:var(--text2);margin-top:3px;margin-left:28px;font-style:italic;line-height:1.5">' + escHtml(p._summary) + '</div>';
+      html += '</div>';
+    });
+  }
+
+  if (isolated.length > 0) {
+    html += '<div style="font-size:10px;font-weight:700;color:var(--text3);margin-top:10px;margin-bottom:5px;text-transform:uppercase;letter-spacing:.06em">Omitted</div>';
+    sorted.filter(function(p){ return isolated.includes(p.scanId); }).forEach(function(p) {
+      const idx = sorted.indexOf(p) + 1;
+      html += '<div style="display:flex;align-items:center;gap:8px;padding:6px 0;border-top:1px solid var(--border);font-size:11px">';
+      html += '<span style="display:inline-flex;align-items:center;justify-content:center;width:20px;height:20px;border-radius:50%;background:#f1efe8;border:1px solid #b4b2a9;font-size:9px;font-weight:700;color:#888780;flex-shrink:0">P' + idx + '</span>';
+      html += '<span style="color:var(--text3)">' + escHtml((p.topMatches||[])[0] || p.overallLabel || '') + '</span>';
+      html += '<span style="font-size:10px;color:var(--text3);margin-left:auto;font-style:italic">No connection</span>';
+      html += '</div>';
+    });
+  }
+
+  html += '</div>';
+  return html;
+}
+
 async function runClientInvestigation() {
   const basket = getClientBasket();
   if (basket.length < 2) { toast('Add at least 2 posts to investigate.'); return; }
@@ -2112,7 +2283,11 @@ async function runClientInvestigation() {
     });
     const postClusterMap = {};
     clusters.forEach(function(cluster, ci){ cluster.forEach(function(id){ if (!postClusterMap[id]) postClusterMap[id] = []; postClusterMap[id].push(ci); }); });
+    const enrichedBasket = basket.map(function(p){ return postMap[p.scanId] || p; });
     let html = '';
+    // Timeline + Legend (same as admin)
+    html += renderClientTimeline(enrichedBasket, clusters, isolated, postClusterMap, connections);
+    html += renderClientLegend(enrichedBasket, clusters, isolated, postClusterMap);
     // Synopsis cards
     results.forEach(function(s, i) {
       const color = CLIENT_CLUSTER_COLORS[i % CLIENT_CLUSTER_COLORS.length];
