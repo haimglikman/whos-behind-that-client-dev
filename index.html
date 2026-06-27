@@ -327,8 +327,9 @@ body{background:var(--bg);display:flex;flex-direction:column;min-height:100vh}
 <!-- NAV -->
 <div class="nav">
   <div class="nav-item active" id="nav-analyze" onclick="showPage('analyze',this)">Analyze</div>
-  <div class="nav-item" id="nav-history" onclick="showPage('history',this)">My history</div>
+  <div class="nav-item" id="nav-history" onclick="showPage('history',this)">Post history</div>
   <div class="nav-item" id="nav-investigate" onclick="showPage('investigate',this)">Investigate<span id="client-investigate-count" style="display:none;background:var(--blue);color:#fff;border-radius:99px;font-size:9px;padding:1px 6px;margin-left:4px;font-weight:700"></span></div>
+  <div class="nav-item" id="nav-clusters" onclick="showPage('clusters',this)">Clusters history</div>
   <div class="nav-item" id="nav-faq" onclick="showPage('faq',this)">FAQ</div>
   <div class="nav-item" id="nav-about" onclick="showPage('about',this)">About</div>
 </div>
@@ -473,7 +474,7 @@ body{background:var(--bg);display:flex;flex-direction:column;min-height:100vh}
   <div class="page" id="page-history">
     <div class="history-main">
       <div class="page-header">
-        <h1>My history</h1>
+        <h1>Post history</h1>
         <p>Your personal scan history — visible only to you</p>
       </div>
 
@@ -532,7 +533,7 @@ body{background:var(--bg);display:flex;flex-direction:column;min-height:100vh}
 
       <div class="card" style="margin-bottom:12px">
         <div class="card-label">Posts in basket (<span id="client-basket-count">0</span>)</div>
-        <div id="client-basket-list"><div style="font-size:12px;color:var(--text3);padding:6px 0">No posts added yet. Add posts from My history or from a scan result.</div></div>
+        <div id="client-basket-list"><div style="font-size:12px;color:var(--text3);padding:6px 0">No posts added yet. Add posts from Post history or from a scan result.</div></div>
       </div>
 
       <div id="client-investigate-results"></div>
@@ -597,6 +598,17 @@ body{background:var(--bg);display:flex;flex-direction:column;min-height:100vh}
   </div>
 
   <!-- ── FAQ PAGE ── -->
+  <!-- ── CLUSTERS HISTORY PAGE ── -->
+  <div class="page" id="page-clusters">
+    <div class="history-main">
+      <div class="page-header">
+        <h1>Clusters history</h1>
+        <p>Previous investigation results saved across sessions</p>
+      </div>
+      <div id="client-clusters-list"><div style="font-size:12px;color:var(--text3);padding:20px 0">Loading...</div></div>
+    </div>
+  </div>
+
   <div class="page" id="page-faq">
     <div class="about-main">
       <div class="page-header" style="margin-bottom:20px">
@@ -1026,8 +1038,8 @@ const ENTITY_RELATIONS = {
 // ─────────────────────────────────────────────
 // CONFIG
 // ─────────────────────────────────────────────
-const CLIENT_VERSION = '1.13.0';
-const SERVER_URL = 'https://whos-behind-that-server-dev.onrender.com';
+const CLIENT_VERSION = '1.14.0';
+const SERVER_URL = 'https://DEV-SERVER-URL-HERE.onrender.com';
 const DAILY_LIMIT = 10;
 const CONTACT_EMAIL = 'contact@whosbehindthat.com'; // replace with real email
 
@@ -1098,6 +1110,7 @@ function showPage(name, el) {
   if (el) el.classList.add('active');
   if (name === 'history') { renderHistory(); applyClientFilters(); }
   if (name === 'investigate') { updateClientInvestigateUI(); }
+  if (name === 'clusters') { renderClientClusters(); }
   if (history.state && history.state.page !== name) {
     history.pushState({ page: name }, '', '#' + name);
   }
@@ -1116,6 +1129,7 @@ window.addEventListener('popstate', function(e) {
   if (el) el.classList.add('active');
   if (name === 'history') { renderHistory(); applyClientFilters(); }
   if (name === 'investigate') { updateClientInvestigateUI(); }
+  if (name === 'clusters') { renderClientClusters(); }
   setMobileTab(name);
 });
 
@@ -1328,7 +1342,7 @@ function finishAnalysis(entry) {
     showResults(entry.url || '', entry.fullResult);
   }
   const scanId = entry ? entry.scanId : '';
-  toastLong('Analysis complete — saved to My history' + (scanId ? ' · ' + scanId : ''));
+  toastLong('Analysis complete — saved to Post history' + (scanId ? ' · ' + scanId : ''));
 }
 
 async function performServerAnalysis(url) {
@@ -1957,6 +1971,68 @@ function renderClientBasket() {
 }
 
 // ─── CLIENT RUN INVESTIGATION ───
+// ─── CLIENT CLUSTER ID + SAVE + HISTORY ───
+function generateClientClusterId(srvVer) {
+  const now = new Date();
+  const date = now.getFullYear().toString() + String(now.getMonth()+1).padStart(2,'0') + String(now.getDate()).padStart(2,'0');
+  const random = Math.random().toString(36).substring(2,6).toUpperCase();
+  const av = CLIENT_VERSION.replace(/\./g,'');
+  const sv = (srvVer||'?').replace(/\./g,'');
+  return 'WBT-CLU-' + date + '-' + av + '-' + sv + '-' + random;
+}
+async function saveClientCluster(synthesis, postIds, srvVer) {
+  const clusterId = generateClientClusterId(srvVer);
+  try {
+    await fetch(SERVER_URL + '/clusters/save', {
+      method:'POST', headers:{'Content-Type':'application/json'},
+      body: JSON.stringify({
+        clusterId, clusterName: synthesis.clusterName||'', synopsis: synthesis.synopsis||'',
+        dominantEntity: synthesis.dominantEntity||'', connectionType: synthesis.connectionType||'',
+        frame: synthesis.frame||'', event: synthesis.event||'',
+        postIds: postIds||[], postCount: (postIds||[]).length,
+        source: 'client', appVersion: CLIENT_VERSION, serverVersion: srvVer
+      })
+    });
+    return clusterId;
+  } catch(e) { console.warn('Cluster save failed:', e.message); return null; }
+}
+async function loadClientClusters() {
+  try {
+    const res = await fetch(SERVER_URL + '/clusters/list');
+    if (!res.ok) return [];
+    const data = await res.json();
+    return data.clusters || [];
+  } catch(e) { return []; }
+}
+function renderClientClusters() {
+  const el = document.getElementById('client-clusters-list');
+  if (!el) return;
+  el.innerHTML = '<div style="font-size:12px;color:var(--text3);padding:8px 0">Loading...</div>';
+  loadClientClusters().then(function(clusters) {
+    if (!clusters.length) {
+      el.innerHTML = '<div style="font-size:12px;color:var(--text3);padding:20px 0">No cluster analyses yet. Run an investigation to see results here.</div>';
+      return;
+    }
+    el.innerHTML = clusters.map(function(c) {
+      const d = c.ts ? new Date(c.ts) : null;
+      const dateStr = d ? d.toLocaleDateString() + ' ' + d.toLocaleTimeString([],{hour:'2-digit',minute:'2-digit'}) : '—';
+      return '<div class="card" style="margin-bottom:10px">' +
+        '<div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-bottom:6px">' +
+          '<span style="font-family:var(--mono);font-size:9px;color:var(--text3)">' + escHtml(c.id) + '</span>' +
+          '<span style="font-size:10px;color:var(--text3);margin-left:auto">' + dateStr + '</span>' +
+        '</div>' +
+        '<div style="font-size:13px;font-weight:700;color:var(--text);margin-bottom:6px">' + escHtml(c.clusterName||'Unnamed cluster') + '</div>' +
+        (c.synopsis ? '<p style="font-size:12px;color:var(--text2);line-height:1.7;margin-bottom:8px">' + escHtml(c.synopsis) + '</p>' : '') +
+        '<div style="display:flex;flex-wrap:wrap;gap:6px;margin-bottom:4px">' +
+          (c.dominantEntity ? '<span class="history-tag" style="color:var(--blue)">' + escHtml(c.dominantEntity) + '</span>' : '') +
+          (c.connectionType ? '<span class="history-tag">' + escHtml(c.connectionType) + '</span>' : '') +
+        '</div>' +
+        '<div style="font-size:10px;color:var(--text3)">' + (c.postCount||0) + ' posts · ' + escHtml(c.source||'') + ' · ' + escHtml(c.appVersion||'') + '</div>' +
+      '</div>';
+    }).join('');
+  });
+}
+
 const CLIENT_CLUSTER_COLORS = [
   { bg:'#eff6ff', border:'#1a6bff', text:'#1a6bff' },
   { bg:'#e1f5ee', border:'#0f6e56', text:'#0f6e56' },
@@ -2013,6 +2089,11 @@ async function runClientInvestigation() {
       html += '</div>';
     }
     resultsEl.innerHTML = html;
+    // Save clusters to server DB
+    const srvVerMatch = document.getElementById('srv-ver-label') ? document.getElementById('srv-ver-label').textContent.replace('srv v','') : '?';
+    await Promise.allSettled(results.map(function(s, i) {
+      return saveClientCluster(s, clusters[i], srvVerMatch);
+    }));
   } catch(err) {
     resultsEl.innerHTML = '<div class="card"><div style="font-size:12px;color:var(--red)">Investigation failed: ' + escHtml(err.message) + '</div></div>';
   }
@@ -2141,6 +2222,10 @@ function setMobileTab(name) {
   <button class="mobile-tab" id="mtab-investigate" onclick="showPage('investigate',document.getElementById('nav-investigate'));setMobileTab('investigate')">
     <svg viewBox="0 0 24 24" fill="none"><circle cx="8" cy="12" r="2.5" stroke="currentColor" stroke-width="1.8"/><circle cx="16" cy="7" r="2.5" stroke="currentColor" stroke-width="1.8"/><circle cx="16" cy="17" r="2.5" stroke="currentColor" stroke-width="1.8"/><line x1="10.2" y1="10.8" x2="14" y2="8.2" stroke="currentColor" stroke-width="1.5"/><line x1="10.2" y1="13.2" x2="14" y2="15.8" stroke="currentColor" stroke-width="1.5"/></svg>
     Investigate
+  </button>
+  <button class="mobile-tab" id="mtab-clusters" onclick="showPage('clusters',document.getElementById('nav-clusters'));setMobileTab('clusters')">
+    <svg viewBox="0 0 24 24" fill="none"><circle cx="5" cy="12" r="3" stroke="currentColor" stroke-width="1.8"/><circle cx="19" cy="6" r="3" stroke="currentColor" stroke-width="1.8"/><circle cx="19" cy="18" r="3" stroke="currentColor" stroke-width="1.8"/><line x1="7.8" y1="10.5" x2="16.2" y2="7.5" stroke="currentColor" stroke-width="1.5"/><line x1="7.8" y1="13.5" x2="16.2" y2="16.5" stroke="currentColor" stroke-width="1.5"/></svg>
+    Clusters
   </button>
   <button class="mobile-tab" id="mtab-faq" onclick="showPage('faq',document.getElementById('nav-faq'));setMobileTab('faq')">
     <svg viewBox="0 0 24 24" fill="none"><circle cx="12" cy="12" r="9" stroke="currentColor" stroke-width="1.8"/><path d="M9.5 9.5a2.5 2.5 0 015 0c0 1.5-2.5 2-2.5 3.5" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/><circle cx="12" cy="16.5" r="1" fill="currentColor"/></svg>
