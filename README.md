@@ -1,3 +1,8 @@
+### v1.14.4 — bug fix (client-dev) | Server: v1.18.3 | Admin: v2.12.4
+- Timeline: same label clamping and hover tooltip fixes as admin
+- Cluster cards: cluster ID shown at top, editable name field with Save button
+- Rename works from both live investigation results and cluster history view
+
 ### v1.14.3 — bug fix (client-dev) | Server: v1.18.2 | Admin: v2.12.3
 - Timeline: same fixes as admin — stacked vertical labels for same-date posts, crisp font
 - Cluster history: omitted posts now shown when reopening a saved cluster
