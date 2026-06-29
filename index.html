@@ -1038,7 +1038,7 @@ const ENTITY_RELATIONS = {
 // ─────────────────────────────────────────────
 // CONFIG
 // ─────────────────────────────────────────────
-const CLIENT_VERSION = '1.14.2';
+const CLIENT_VERSION = '1.14.3';
 const SERVER_URL = 'https://DEV-SERVER-URL-HERE.onrender.com';
 const DAILY_LIMIT = 10;
 const CONTACT_EMAIL = 'contact@whosbehindthat.com'; // replace with real email
@@ -1983,7 +1983,7 @@ function generateClientClusterId(srvVer) {
   const sv = (srvVer||'?').replace(/\./g,'');
   return 'WBT-CLU-' + date + '-' + av + '-' + sv + '-' + random;
 }
-async function saveClientCluster(synthesis, postIds, srvVer) {
+async function saveClientCluster(synthesis, postIds, isolatedPostIds, srvVer) {
   const clusterId = generateClientClusterId(srvVer);
   try {
     await fetch(SERVER_URL + '/clusters/save', {
@@ -1992,7 +1992,9 @@ async function saveClientCluster(synthesis, postIds, srvVer) {
         clusterId, clusterName: synthesis.clusterName||'', synopsis: synthesis.synopsis||'',
         dominantEntity: synthesis.dominantEntity||'', connectionType: synthesis.connectionType||'',
         frame: synthesis.frame||'', event: synthesis.event||'',
-        postIds: postIds||[], postCount: (postIds||[]).length,
+        postIds: postIds||[], isolatedPostIds: isolatedPostIds||[],
+        postSummaries: synthesis.postSummaries||[],
+        postCount: (postIds||[]).length,
         source: 'client', appVersion: CLIENT_VERSION, serverVersion: srvVer
       })
     });
@@ -2048,19 +2050,25 @@ function openClientClusterFromHistory(idx) {
 
   const summaries = c.postSummaries || [];
   const color = CLIENT_CLUSTER_COLORS[0];
+  const isolated = c.isolatedPostIds || [];
 
-  // Reconstruct posts from local history by matching scan IDs
+  // Reconstruct all posts (connected + isolated) from local history
   const h = getHistory();
-  const posts = (c.postIds||[]).map(function(scanId, i) {
+  const allPostIds = (c.postIds||[]).concat(isolated);
+  const posts = allPostIds.map(function(scanId) {
     const found = h.find(function(e){ return e.scanId === scanId; });
-    return Object.assign({}, found || { scanId: scanId, url: scanId, postText: '', topMatches: [], overallScore: 0 }, { _summary: summaries[i] || '' });
+    const isConnected = (c.postIds||[]).includes(scanId);
+    const sumIdx = (c.postIds||[]).indexOf(scanId);
+    return Object.assign({}, found || { scanId: scanId, url: scanId, postText: '', topMatches: [], overallScore: 0 }, {
+      _summary: isConnected && sumIdx >= 0 ? summaries[sumIdx] || '' : ''
+    });
   });
   const postClusterMap = {};
   (c.postIds||[]).forEach(function(id){ postClusterMap[id] = [0]; });
 
   let html = '';
-  html += renderClientTimeline(posts, [c.postIds||[]], [], postClusterMap, []);
-  html += renderClientLegend(posts, [c.postIds||[]], [], postClusterMap);
+  html += renderClientTimeline(posts, [c.postIds||[]], isolated, postClusterMap, []);
+  html += renderClientLegend(posts, [c.postIds||[]], isolated, postClusterMap);
 
   // Synopsis card
   html += '<div class="card" style="margin-bottom:10px">';
@@ -2097,7 +2105,7 @@ const CLIENT_CLUSTER_COLORS = [
 function renderClientTimeline(basket, clusters, isolated, postClusterMap, connections) {
   if (!basket || basket.length === 0) return '';
   const sorted = basket.slice().sort(function(a,b){ return new Date(a.ts||0) - new Date(b.ts||0); });
-  const W = 560, H = 230, PAD = 36, BOTTOM = 175, nodeR = 17;
+  const W = 560, H = 250, PAD = 36, BOTTOM = 180, nodeR = 17;
   const times = sorted.map(function(p){ return new Date(p.ts||0).getTime(); });
   const tMin = Math.min.apply(null,times), tMax = Math.max.apply(null,times);
   const tRange = tMax - tMin || 1;
@@ -2201,9 +2209,14 @@ function renderClientTimeline(basket, clusters, isolated, postClusterMap, connec
     const textColor = isMulti ? '#1e293b' : isIsolated ? '#888780' : CLIENT_CLUSTER_COLORS[cis[0] % CLIENT_CLUSTER_COLORS.length].text;
     svg += '<text font-family="Nunito,sans-serif" font-size="10" font-weight="700" fill="' + textColor + '" x="' + x + '" y="' + (y-3) + '" text-anchor="middle">P' + idx + '</text>';
     svg += '<text font-family="Nunito,sans-serif" font-size="8" fill="' + textColor + '" x="' + x + '" y="' + (y+9) + '" text-anchor="middle">' + (p.overallScore||0) + '%</text>';
-    const title = (p._summary || (p.topMatches||[])[0] || '').slice(0, 16);
-    const titleWidth = nodeR * 2 + 6;
-    svg += '<text font-family="Nunito,sans-serif" font-size="8" fill="var(--text3)" x="' + x + '" y="' + (BOTTOM+24) + '" text-anchor="middle" textLength="' + titleWidth + '" lengthAdjust="spacing">' + escHtml(title) + '</text>';
+    // Stack title labels vertically for same-date posts
+    const pd = p.ts ? new Date(p.ts) : new Date(0);
+    const pDateKey = pd.toLocaleDateString('en-GB',{day:'2-digit',month:'short'});
+    const pGroup = dateGroups[pDateKey] || [];
+    const pGroupIdx = pGroup.indexOf(p.scanId);
+    const title = (p._summary || (p.topMatches||[])[0] || '').slice(0, 18);
+    const titleY = BOTTOM + 24 + (pGroupIdx * 11);
+    svg += '<text font-family="Nunito,sans-serif" font-size="9" fill="var(--text3)" x="' + x + '" y="' + titleY + '" text-anchor="middle">' + escHtml(title) + '</text>';
   });
 
   svg += '</svg></div>';
@@ -2325,7 +2338,7 @@ async function runClientInvestigation() {
     // Save clusters to server DB
     const srvVerMatch = document.getElementById('srv-ver-label') ? document.getElementById('srv-ver-label').textContent.replace('srv v','') : '?';
     await Promise.allSettled(results.map(function(s, i) {
-      return saveClientCluster(s, clusters[i], srvVerMatch);
+      return saveClientCluster(s, clusters[i], isolated, srvVerMatch);
     }));
   } catch(err) {
     resultsEl.innerHTML = '<div class="card"><div style="font-size:12px;color:var(--red)">Investigation failed: ' + escHtml(err.message) + '</div></div>';
