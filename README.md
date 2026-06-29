@@ -1,3 +1,8 @@
+### v1.14.3 — bug fix (client-dev) | Server: v1.18.2 | Admin: v2.12.3
+- Timeline: same fixes as admin — stacked vertical labels for same-date posts, crisp font
+- Cluster history: omitted posts now shown when reopening a saved cluster
+- Cluster save: now passes isolated post IDs to server for full reconstruction
+
 ### v1.14.2 — bug fix (client-dev) | Server: v1.18.1 | Admin: v2.12.2
 - Added full cluster visualization to investigate results — timeline SVG with color-coded nodes, connection arcs, cluster labels, split-ring for multi-cluster posts, and legend with post summaries (mirrors admin)
 - Timeline: same-date posts sit side by side with horizontal offset; date labels skip when too close; entity titles constrained to node width
