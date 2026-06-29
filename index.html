@@ -1038,7 +1038,7 @@ const ENTITY_RELATIONS = {
 // ─────────────────────────────────────────────
 // CONFIG
 // ─────────────────────────────────────────────
-const CLIENT_VERSION = '1.14.3';
+const CLIENT_VERSION = '1.14.4';
 const SERVER_URL = 'https://DEV-SERVER-URL-HERE.onrender.com';
 const DAILY_LIMIT = 10;
 const CONTACT_EMAIL = 'contact@whosbehindthat.com'; // replace with real email
@@ -1983,8 +1983,8 @@ function generateClientClusterId(srvVer) {
   const sv = (srvVer||'?').replace(/\./g,'');
   return 'WBT-CLU-' + date + '-' + av + '-' + sv + '-' + random;
 }
-async function saveClientCluster(synthesis, postIds, isolatedPostIds, srvVer) {
-  const clusterId = generateClientClusterId(srvVer);
+async function saveClientCluster(synthesis, postIds, isolatedPostIds, srvVer, preGeneratedId) {
+  const clusterId = preGeneratedId || generateClientClusterId(srvVer);
   try {
     await fetch(SERVER_URL + '/clusters/save', {
       method:'POST', headers:{'Content-Type':'application/json'},
@@ -2072,10 +2072,16 @@ function openClientClusterFromHistory(idx) {
 
   // Synopsis card
   html += '<div class="card" style="margin-bottom:10px">';
-  html += '<div style="display:flex;align-items:center;gap:8px;margin-bottom:8px">';
-  html += '<span style="background:' + color.bg + ';color:' + color.text + ';border:1px solid ' + color.border + ';border-radius:99px;padding:2px 10px;font-size:10px;font-weight:700">' + escHtml(c.clusterName||'Cluster') + '</span>';
-  if (c.connectionType) html += '<span style="font-size:10px;color:var(--text3);margin-left:auto;font-style:italic">' + escHtml(c.connectionType) + '</span>';
-  html += '</div>';
+  // Cluster ID header
+  html += '<div style="margin-bottom:10px">';
+  html += '<div style="font-family:var(--mono);font-size:10px;font-weight:700;color:var(--blue);background:var(--blue-dim);border:1px solid rgba(26,107,255,.2);border-radius:6px;padding:3px 10px;display:inline-block;margin-bottom:8px">' + escHtml(c.id) + '</div>';
+  // Rename field
+  html += '<div style="font-size:10px;font-weight:700;color:var(--text3);text-transform:uppercase;letter-spacing:.07em;margin-bottom:5px">Cluster name</div>';
+  html += '<div style="display:flex;gap:8px;align-items:center">';
+  html += '<input type="text" class="url-input" style="flex:1;font-size:12px;font-weight:600;color:var(--text);height:32px" id="client-cluster-name-hist" value="' + escHtml(c.clusterName||'') + '" />';
+  html += '<button style="background:var(--blue);color:#fff;border:none;border-radius:8px;padding:6px 12px;font-size:11px;font-weight:700;cursor:pointer;font-family:var(--sans);white-space:nowrap" data-cid="' + escHtml(c.id) + '" onclick="renameClientCluster(this.dataset.cid,\'hist\')">Save</button>';
+  html += '</div></div>';
+  if (c.connectionType) html += '<div style="font-size:10px;color:var(--text3);font-style:italic;margin-bottom:8px">' + escHtml(c.connectionType) + '</div>';
   html += '<p style="font-size:12px;line-height:1.7;color:var(--text2);margin-bottom:8px">' + escHtml(c.synopsis||'') + '</p>';
   if (c.dominantEntity) html += '<div style="font-size:11px;color:var(--text3);font-weight:600;margin-bottom:8px">Serves: <span style="color:var(--text2)">' + escHtml(c.dominantEntity) + '</span></div>';
   if (summaries.length > 0) {
@@ -2089,10 +2095,23 @@ function openClientClusterFromHistory(idx) {
   }
   if (c.frame) html += '<div style="font-size:10px;color:var(--text3);margin-top:8px">Frame: ' + escHtml(c.frame) + '</div>';
   if (c.event) html += '<div style="font-size:10px;color:var(--text3)">Event: ' + escHtml(c.event) + '</div>';
-  html += '<div style="font-size:9px;color:var(--text3);margin-top:6px;font-family:var(--mono)">' + escHtml(c.id) + '</div>';
   html += '</div>';
 
   resultsEl.innerHTML = html;
+}
+
+async function renameClientCluster(clusterId, suffix) {
+  const input = document.getElementById('client-cluster-name-' + suffix);
+  if (!input) return;
+  const newName = input.value.trim();
+  if (!newName) return;
+  try {
+    await fetch(SERVER_URL + '/clusters/rename', {
+      method:'PATCH', headers:{'Content-Type':'application/json'},
+      body: JSON.stringify({ clusterId, clusterName: newName })
+    });
+    toast('Cluster renamed ✓');
+  } catch(e) { toast('Rename failed'); }
 }
 
 const CLIENT_CLUSTER_COLORS = [
@@ -2209,14 +2228,19 @@ function renderClientTimeline(basket, clusters, isolated, postClusterMap, connec
     const textColor = isMulti ? '#1e293b' : isIsolated ? '#888780' : CLIENT_CLUSTER_COLORS[cis[0] % CLIENT_CLUSTER_COLORS.length].text;
     svg += '<text font-family="Nunito,sans-serif" font-size="10" font-weight="700" fill="' + textColor + '" x="' + x + '" y="' + (y-3) + '" text-anchor="middle">P' + idx + '</text>';
     svg += '<text font-family="Nunito,sans-serif" font-size="8" fill="' + textColor + '" x="' + x + '" y="' + (y+9) + '" text-anchor="middle">' + (p.overallScore||0) + '%</text>';
-    // Stack title labels vertically for same-date posts
+    // Stack title labels vertically for same-date posts, clamp X to frame
     const pd = p.ts ? new Date(p.ts) : new Date(0);
     const pDateKey = pd.toLocaleDateString('en-GB',{day:'2-digit',month:'short'});
     const pGroup = dateGroups[pDateKey] || [];
     const pGroupIdx = pGroup.indexOf(p.scanId);
-    const title = (p._summary || (p.topMatches||[])[0] || '').slice(0, 18);
+    const fullTitle = (p._summary || (p.topMatches||[])[0] || '');
+    const shortTitle = fullTitle.slice(0, 18) + (fullTitle.length > 18 ? '…' : '');
     const titleY = BOTTOM + 24 + (pGroupIdx * 11);
-    svg += '<text font-family="Nunito,sans-serif" font-size="9" fill="var(--text3)" x="' + x + '" y="' + titleY + '" text-anchor="middle">' + escHtml(title) + '</text>';
+    const labelX = Math.max(PAD + 28, Math.min(W - PAD - 28, x));
+    const anchor2 = Math.abs(labelX - x) < 3 ? 'middle' : (labelX < x ? 'start' : 'end');
+    svg += '<text font-family="Nunito,sans-serif" font-size="9" fill="var(--text3)" x="' + labelX + '" y="' + titleY + '" text-anchor="' + anchor2 + '">' +
+      '<title>' + escHtml(fullTitle) + '</title>' + escHtml(shortTitle) +
+    '</text>';
   });
 
   svg += '</svg></div>';
@@ -2335,10 +2359,26 @@ async function runClientInvestigation() {
       html += '</div>';
     }
     resultsEl.innerHTML = html;
-    // Save clusters to server DB
+    // Generate IDs upfront, save clusters, then update UI with IDs
     const srvVerMatch = document.getElementById('srv-ver-label') ? document.getElementById('srv-ver-label').textContent.replace('srv v','') : '?';
+    const clientClusterIds = results.map(function(){ return generateClientClusterId(srvVerMatch); });
+    // Inject cluster IDs and rename fields into rendered cards
+    results.forEach(function(s, i) {
+      const cid = clientClusterIds[i];
+      const card = resultsEl.querySelectorAll('.card')[i + 2]; // offset by timeline + legend cards
+      if (!card || !cid) return;
+      const idDiv = document.createElement('div');
+      idDiv.style.cssText = 'margin-bottom:10px';
+      idDiv.innerHTML = '<div style="font-family:var(--mono);font-size:10px;font-weight:700;color:var(--blue);background:var(--blue-dim);border:1px solid rgba(26,107,255,.2);border-radius:6px;padding:3px 10px;display:inline-block;margin-bottom:8px">' + escHtml(cid) + '</div>' +
+        '<div style="font-size:10px;font-weight:700;color:var(--text3);text-transform:uppercase;letter-spacing:.07em;margin-bottom:5px">Cluster name</div>' +
+        '<div style="display:flex;gap:8px;align-items:center">' +
+        '<input type="text" class="url-input" style="flex:1;font-size:12px;font-weight:600;color:var(--text);height:32px" id="client-cluster-name-' + i + '" value="' + escHtml(s.clusterName||'Cluster '+(i+1)) + '" />' +
+        '<button style="background:var(--blue);color:#fff;border:none;border-radius:8px;padding:6px 12px;font-size:11px;font-weight:700;cursor:pointer;font-family:var(--sans);white-space:nowrap" data-cid="' + escHtml(cid) + '" data-idx="' + i + '" onclick="renameClientCluster(this.dataset.cid,this.dataset.idx)">Save</button>' +
+        '</div>';
+      card.insertBefore(idDiv, card.firstChild);
+    });
     await Promise.allSettled(results.map(function(s, i) {
-      return saveClientCluster(s, clusters[i], isolated, srvVerMatch);
+      return saveClientCluster(s, clusters[i], isolated, srvVerMatch, clientClusterIds[i]);
     }));
   } catch(err) {
     resultsEl.innerHTML = '<div class="card"><div style="font-size:12px;color:var(--red)">Investigation failed: ' + escHtml(err.message) + '</div></div>';
