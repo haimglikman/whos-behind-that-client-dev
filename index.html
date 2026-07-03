@@ -319,7 +319,7 @@ body{background:var(--bg);display:flex;flex-direction:column;min-height:100vh}
   </div>
   <div class="topbar-right">
     <span class="topbar-desktop-only">Powered by Claude AI</span>
-    <span id="app-ver-topbar" class="topbar-mobile-only">app v1.9.2</span>
+    <span id="app-ver-topbar" class="topbar-mobile-only">app v—</span>
     <span id="srv-ver-topbar" class="topbar-mobile-only">srv —</span>
   </div>
 </div>
@@ -507,10 +507,13 @@ body{background:var(--bg);display:flex;flex-direction:column;min-height:100vh}
       </div>
 
       <!-- Pending investigation banner -->
-      <div id="client-pending-banner" style="display:none;background:var(--blue-dim);border:1px solid rgba(26,107,255,.2);border-radius:var(--radius-sm);padding:10px 14px;margin-bottom:10px;align-items:center;gap:10px">
-        <span style="font-size:12px;font-weight:700;color:var(--blue)" id="client-pending-text">0 posts pending investigation</span>
-        <button class="btn-primary btn-sm" style="margin-left:auto;font-size:11px" onclick="showPage('investigate',document.getElementById('nav-investigate'));setMobileTab('investigate')">Open →</button>
-        <button class="btn-primary btn-sm" style="background:none;color:var(--text3);border:1.5px solid var(--border);font-size:11px" onclick="clearClientInvestigation()">Clear</button>
+      <div id="client-pending-banner" style="display:none;background:var(--blue-dim);border:1px solid rgba(26,107,255,.2);border-radius:var(--radius-sm);padding:10px 14px;margin-bottom:10px">
+        <div style="display:flex;align-items:center;gap:10px;margin-bottom:8px">
+          <span style="font-size:12px;font-weight:700;color:var(--blue)" id="client-pending-text">0 posts pending investigation</span>
+          <button class="btn-primary btn-sm" style="margin-left:auto;font-size:11px" onclick="openAndRunClientInvestigation()">Run investigation →</button>
+          <button class="btn-primary btn-sm" style="background:none;color:var(--text3);border:1.5px solid var(--border);font-size:11px" onclick="clearClientInvestigation()">Clear</button>
+        </div>
+        <div id="client-pending-basket-list"></div>
       </div>
 
       <div id="history-list"></div>
@@ -614,283 +617,9 @@ body{background:var(--bg);display:flex;flex-direction:column;min-height:100vh}
       <div class="page-header" style="margin-bottom:20px">
         <h1>FAQ</h1>
       </div>
-
-      <div class="faq-group">
-        <div class="faq-group-label">Terminology</div>
-
-        <div class="faq-item">
-          <div class="faq-q" onclick="toggleFaq(this)">
-            <span>What is an entity?</span>
-            <span class="faq-chevron">▸</span>
-          </div>
-          <div class="faq-a">An entity is any political actor, organization, government, movement, or ideological group whose interests the tool tracks. Examples include Benjamin Netanyahu, The Palestinian Authority, The US government, the IDF, or the Israeli protest movement. Each entity has a defined profile — their known interests, tactics, and public narrative — that the AI uses to score whether a given post serves their agenda.</div>
-        </div>
-
-        <div class="faq-item">
-          <div class="faq-q" onclick="toggleFaq(this)">
-            <span>What is an actor?</span>
-            <span class="faq-chevron">▸</span>
-          </div>
-          <div class="faq-a">An actor is the person or account behind a specific post — the author. When you research an actor, <em>Who's Behind That?</em> builds a profile of who they are: their background, known affiliations, political stance, and online presence. For news articles, actor research also profiles the publication itself — its editorial line, ownership, and known biases.</div>
-        </div>
-
-        <div class="faq-item">
-          <div class="faq-q" onclick="toggleFaq(this)">
-            <span>What is primary vs secondary alignment?</span>
-            <span class="faq-chevron">▸</span>
-          </div>
-          <div class="faq-a">Primary alignment means the post actively serves an entity's interests — its framing, message, or targets work in their favor. Secondary alignment means the entity benefits indirectly — the post wasn't necessarily crafted for them, but spreading it helps them nonetheless. Think of primary as "this post works for them" and secondary as "they'd be happy this post exists." Important to note: alignment does not mean the post was commissioned by the entity, that the author works for them, or that there's any direct connection — it simply reflects whose interests the content serves, intentionally or not.</div>
-        </div>
-
-        <div class="faq-item">
-          <div class="faq-q" onclick="toggleFaq(this)">
-            <span>What is Hidden Convergent Interest?</span>
-            <span class="faq-chevron">▸</span>
-          </div>
-          <div class="faq-a">Hidden Convergent Interest is when two entities that are normally on opposite sides of the conflict both benefit from the same post — even if neither is the obvious intended audience. It reflects the idea that in a complex political landscape, a single piece of content can serve multiple agendas simultaneously, sometimes in ways that aren't immediately obvious. When <em>Who's Behind That?</em> detects this, it flags it as a separate finding so you can see not just who the post was likely written for, but also who quietly benefits from it being spread.</div>
-        </div>
-
-        <div class="faq-item">
-          <div class="faq-q" onclick="toggleFaq(this)">
-            <span>What is a Frame?</span>
-            <span class="faq-chevron">▸</span>
-          </div>
-          <div class="faq-a">A Frame is the wide, ongoing context that a post sits within — broader than a single event, it's the overarching situation that gives the content its meaning. Examples include "the war with Iran" or "the Israeli elections." A Frame can contain many Events, and understanding which Frame a post belongs to helps identify whether it connects to other posts about the same situation.</div>
-        </div>
-
-        <div class="faq-item">
-          <div class="faq-q" onclick="toggleFaq(this)">
-            <span>What is an Event?</span>
-            <span class="faq-chevron">▸</span>
-          </div>
-          <div class="faq-a">An Event is a specific, time-bounded happening that readers will immediately recognize — something like October 7th, the Nasrallah assassination, or the Hezbollah pager attack. Events sit within a broader Frame. A post scored as being "about" a particular Event is a candidate for connection with other posts about the same Event.</div>
-        </div>
-
-        <div class="faq-item">
-          <div class="faq-q" onclick="toggleFaq(this)">
-            <span>What is a Connection?</span>
-            <span class="faq-chevron">▸</span>
-          </div>
-          <div class="faq-a">A Connection is the specific relationship detected between exactly two posts — what ties them together narratively. A connection exists when two posts share the same framing goal, show signs of coordination, reinforce each other's narrative, or form a meaningful pattern together. Not every pair of posts about the same topic has a connection — the relationship needs to be meaningful, not just topical.</div>
-        </div>
-
-        <div class="faq-item">
-          <div class="faq-q" onclick="toggleFaq(this)">
-            <span>What is a Cluster?</span>
-            <span class="faq-chevron">▸</span>
-          </div>
-          <div class="faq-a">A Cluster is a group of posts that are all meaningfully connected to each other — directly or through shared connections. When you run an investigation, posts that pass the connection threshold are grouped into clusters. Posts that don't connect to any others remain isolated and are excluded from the synopsis.</div>
-        </div>
-
-        <div class="faq-item">
-          <div class="faq-q" onclick="toggleFaq(this)">
-            <span>What is a Synopsis?</span>
-            <span class="faq-chevron">▸</span>
-          </div>
-          <div class="faq-a">A Synopsis is the synthesized narrative output generated for a connected cluster — a short text that describes what story is being told across the posts, what framing pattern emerges, and whose interests it serves. A Synopsis is only generated when real connections are found. If no connections exist in a batch of posts, no Synopsis is produced.</div>
-        </div>
-      </div>
-
-      <div class="faq-group">
-        <div class="faq-group-label">Scanning logic</div>
-
-        <div class="faq-item">
-          <div class="faq-q" onclick="toggleFaq(this)">
-            <span>How does post scanning work?</span>
-            <span class="faq-chevron">▸</span>
-          </div>
-          <div class="faq-a">When you submit a URL, the server automatically fetches the text of the post or article. That text is then analyzed by Claude AI, which scores it against all entities in the database simultaneously. Each entity is evaluated based on whether the post advances their strategic interests, matches their known methods, and echoes their public narrative. The highest-scoring entities above the threshold appear as primary or secondary alignments.</div>
-        </div>
-
-        <div class="faq-item">
-          <div class="faq-q" onclick="toggleFaq(this)">
-            <span>How does actor scanning work?</span>
-            <span class="faq-chevron">▸</span>
-          </div>
-          <div class="faq-a">After a successful post scan, you're offered the option to research the account or author behind it. The server looks up publicly available information about them — their background, known affiliations, political stance, and online presence. For news articles, it also profiles the publication: its editorial line, ownership, and known biases. Results are generally accurate for well-known public figures but may be limited for anonymous or low-profile accounts.</div>
-        </div>
-
-        <div class="faq-item">
-          <div class="faq-q" onclick="toggleFaq(this)">
-            <span>Does the scan consider context beyond the post text?</span>
-            <span class="faq-chevron">▸</span>
-          </div>
-          <div class="faq-a">Each scan is based solely on the post or article being analyzed — it is not influenced by the author's other posts, past scans, or any external context outside of what's in the text itself. That said, the engine considers two dimensions within the post: what it says (content) and who it attacks (context). If a post directly attacks a named political figure, the engine identifies who benefits from that attack and factors that into the score. Actor research is separate — it adds background on the author for your own interpretation, but does not feed back into the post's scoring.</div>
-        </div>
-
-        <div class="faq-item">
-          <div class="faq-q" onclick="toggleFaq(this)">
-            <span>Can you scan an actor without scanning a post first?</span>
-            <span class="faq-chevron">▸</span>
-          </div>
-          <div class="faq-a">Not currently — actor research is triggered from a post scan result. This is intentional: <em>Who's Behind That?</em> is designed to analyze how content is framed, not to investigate individuals in isolation. The actor profile provides useful background for interpreting a specific scan, but the post itself is always the starting point.</div>
-        </div>
-
-        <div class="faq-item">
-          <div class="faq-q" onclick="toggleFaq(this)">
-            <span>Why do some posts score 0%?</span>
-            <span class="faq-chevron">▸</span>
-          </div>
-          <div class="faq-a">A zero score means the AI found no meaningful alignment with any entity above the detection threshold. This can happen when a post is genuinely neutral or factual, when the content is too vague or short to score reliably, or occasionally when the model misses context it should have caught — particularly for posts that rely heavily on irony, cultural shorthand, or implicit references. If you believe a zero result is wrong, feel free to contact us.</div>
-        </div>
-
-        <div class="faq-item">
-          <div class="faq-q" onclick="toggleFaq(this)">
-            <span>What does the score percentage mean?</span>
-            <span class="faq-chevron">▸</span>
-          </div>
-          <div class="faq-a">The score reflects how strongly a post serves a given entity's interests, on a scale of 0 to 100. It combines three factors: strategic interest alignment, tactical fingerprint, and narrative echo. Only entities scoring above 85% appear in your results — below that threshold the signal is considered too weak to be meaningful.</div>
-        </div>
-
-        <div class="faq-item">
-          <div class="faq-q" onclick="toggleFaq(this)">
-            <span>What's the difference between scanning a social media post and a news article?</span>
-            <span class="faq-chevron">▸</span>
-          </div>
-          <div class="faq-a">Both are analyzed the same way — the text is scored against the entity database to detect whose narrative it serves. The difference is in what you're measuring: a social media post reflects what an individual chose to say and how they framed it; a news article reflects how a publication chose to cover a story, what angle it took, and what it emphasized or left out. Both are valid and meaningful signals.</div>
-        </div>
-
-        <div class="faq-item">
-          <div class="faq-q" onclick="toggleFaq(this)">
-            <span>I think the scan results were wrong</span>
-            <span class="faq-chevron">▸</span>
-          </div>
-          <div class="faq-a">AI scoring is imperfect. The model may miss context, misread sarcasm, or fail to identify an indirect beneficiary — especially for posts that are ambiguous, highly local, or rely on cultural knowledge. If you consistently see wrong results for a certain type of post, you can contact us — it helps improve the model.</div>
-        </div>
-
-        <div class="faq-item">
-          <div class="faq-q" onclick="toggleFaq(this)">
-            <span>Are the entities interchangeable?</span>
-            <span class="faq-chevron">▸</span>
-          </div>
-          <div class="faq-a">Yes — the entity database is designed to evolve with the political landscape. Entities can be added, edited, split, or removed to reflect new developments, shifting alliances, emerging figures, or entirely new topics. The database is versioned, so you can always see which version was used for any given scan.</div>
-        </div>
-
-        <div class="faq-item">
-          <div class="faq-q" onclick="toggleFaq(this)">
-            <span>How up to date is the entity database?</span>
-            <span class="faq-chevron">▸</span>
-          </div>
-          <div class="faq-a">The database is updated periodically to reflect the current political landscape — new parties, splits, emerging figures, and shifting alliances. Each version is numbered, and every scan records which database version was used, so you can always trace results back to the entity set that produced them.</div>
-        </div>
-
-        <div class="faq-item">
-          <div class="faq-q" onclick="toggleFaq(this)">
-            <span>Can <em>Who's Behind That?</em> work for other topics?</span>
-            <span class="faq-chevron">▸</span>
-          </div>
-          <div class="faq-a">Yes — in principle the tool can be adapted to any topic where narrative alignment matters. Currently it's built specifically for the Israeli-Palestinian conflict and Israeli domestic politics, and the results are most reliable within that scope. Applying it to other conflicts or political landscapes would require building a dedicated entity database for that domain, which is something we're open to exploring.</div>
-        </div>
-
-        <div class="faq-item">
-          <div class="faq-q" onclick="toggleFaq(this)">
-            <span>Are the entities static or dynamic?</span>
-            <span class="faq-chevron">▸</span>
-          </div>
-          <div class="faq-a">The entity database is reviewed on a weekly basis and updated when meaningful developments occur — such as election results, shifting alliances, new political figures, or major strategic changes. Minor day-to-day news doesn't trigger updates; only changes that genuinely affect an entity's interests or behavior do.</div>
-        </div>
-
-      </div>
-
-      <div class="faq-group">
-        <div class="faq-group-label">Technical</div>
-
-        <div class="faq-item">
-          <div class="faq-q" onclick="toggleFaq(this)">
-            <span>What languages are supported?</span>
-            <span class="faq-chevron">▸</span>
-          </div>
-          <div class="faq-a">Posts in Hebrew and Arabic are automatically detected and pre-translated before scoring, with political context extracted as part of the process. English posts are scored directly. Other languages may work but results are less reliable.</div>
-        </div>
-
-        <div class="faq-item">
-          <div class="faq-q" onclick="toggleFaq(this)">
-            <span>How does the Investigate feature work?</span>
-            <span class="faq-chevron">▸</span>
-          </div>
-          <div class="faq-a">The Investigate tab lets you cross-analyze multiple posts together to detect narrative patterns that wouldn't be visible from a single scan. You add posts to an investigation basket from your history or directly from a scan result, then run the investigation when ready. The process works in two stages: first, every pair of posts is evaluated for a meaningful connection — same framing, coordinated narrative, or escalating pattern. Pairs that pass the threshold form clusters. Second, each cluster gets a synthesized synopsis describing what narrative is being constructed and whose interests it serves. Posts with no detected connections are excluded and noted separately. The basket persists across sessions so you can build an investigation over time.</div>
-        </div>
-
-        <div class="faq-item">
-          <div class="faq-q" onclick="toggleFaq(this)">
-            <span>What platforms are supported? Does scanning work the same for all?</span>
-            <span class="faq-chevron">▸</span>
-          </div>
-          <div class="faq-a"><em>Who's Behind That?</em> supports posts from X (Twitter), Facebook, and Instagram, as well as articles from major news and media websites including Ynet, Haaretz, Times of Israel, BBC, Al Jazeera, New York Times, and many others. The analysis itself works the same way across all platforms — once the text is retrieved, it goes through the same scoring process regardless of source. That said, every platform is built differently, and some are more restrictive than others when it comes to automated access. If scanning from a particular platform doesn't work, manually copying and pasting the text is always an option.</div>
-        </div>
-
-        <div class="faq-item">
-          <div class="faq-q" onclick="toggleFaq(this)">
-            <span>I got an error when trying to scan a post</span>
-            <span class="faq-chevron">▸</span>
-          </div>
-          <div class="faq-a"><em>Who's Behind That?</em> can only access publicly available content. Private social media posts, friends-only content, closed groups, and articles behind a paywall cannot be fetched — in those cases, you can paste the text manually instead. For Facebook and Instagram specifically, automated access is sometimes temporarily blocked by the platform — copying and pasting the post text manually is the best workaround. If the server is waking up from sleep, waiting 30 seconds and trying again usually resolves the issue.</div>
-        </div>
-
-        <div class="faq-item">
-          <div class="faq-q" onclick="toggleFaq(this)">
-            <span>Does actor scanning count toward my daily quota?</span>
-            <span class="faq-chevron">▸</span>
-          </div>
-          <div class="faq-a">Yes — each actor research uses one of your daily credits, the same as a post scan. This is because it involves an AI call which has a real cost.</div>
-        </div>
-
-        <div class="faq-item">
-          <div class="faq-q" onclick="toggleFaq(this)">
-            <span>Can <em>Who's Behind That?</em> integrate with other platforms via API?</span>
-            <span class="faq-chevron">▸</span>
-          </div>
-          <div class="faq-a">We'd love to make that possible. API access isn't available yet — the tool is currently a web app only — but if you're interested in integration for research, journalism, or institutional use, we'd be happy to hear from you at <a href="mailto:contact@whosbehindthat.com">contact@whosbehindthat.com</a>.</div>
-        </div>
-      </div>
-
-      <div class="faq-group">
-        <div class="faq-group-label">Privacy</div>
-
-        <div class="faq-item">
-          <div class="faq-q" onclick="toggleFaq(this)">
-            <span>Is login or identification required?</span>
-            <span class="faq-chevron">▸</span>
-          </div>
-          <div class="faq-a">No login, account, or registration is required. <em>Who's Behind That?</em> uses a randomly generated device identifier stored in your browser to track your daily scan quota and link your local history — nothing more. There is no user profile, no email address, and no authentication of any kind. You can start scanning immediately.</div>
-        </div>
-
-        <div class="faq-item">
-          <div class="faq-q" onclick="toggleFaq(this)">
-            <span>Is <em>Who's Behind That?</em> free?</span>
-            <span class="faq-chevron">▸</span>
-          </div>
-          <div class="faq-a">Yes — <em>Who's Behind That?</em> is free to use during the beta period. There are no subscription fees, no payment required, and no premium tier. The tool is currently limited to 10 scans per day per device to manage API costs, but this limit may be adjusted in future versions. If you need higher usage for research or institutional purposes, contact us at <a href="mailto:contact@whosbehindthat.com">contact@whosbehindthat.com</a>.</div>
-        </div>
-
-        <div class="faq-item">
-          <div class="faq-q" onclick="toggleFaq(this)">
-            <span>Can someone know what I scanned for?</span>
-            <span class="faq-chevron">▸</span>
-          </div>
-          <div class="faq-a">Your scan history is stored locally on your device and is private to you. The service operator (<em>Who's Behind That?</em>) can see anonymized scan data — the post URL, content, and results — linked only to a randomly generated device identifier. No personal information is collected or visible to us: no IP address, no email, no device identifiers such as MAC address, and no account information of any kind. Your scans are never shared with third parties.</div>
-        </div>
-
-        <div class="faq-item">
-          <div class="faq-q" onclick="toggleFaq(this)">
-            <span>Is my data used to train AI models?</span>
-            <span class="faq-chevron">▸</span>
-          </div>
-          <div class="faq-a">No. Your scan data is not used to train Claude or any other AI model. Post text is sent to Anthropic's Claude API for analysis and is subject to Anthropic's privacy policy, but <em>Who's Behind That?</em> does not share your data for training purposes.</div>
-        </div>
-
-        <div class="faq-item">
-          <div class="faq-q" onclick="toggleFaq(this)">
-            <span>Does <em>Who's Behind That?</em> use cookies?</span>
-            <span class="faq-chevron">▸</span>
-          </div>
-          <div class="faq-a">No, <em>Who's Behind That?</em> does not use cookies. Instead, it uses your browser's local storage to keep track of an anonymous device identifier, your scan history, and your daily quota — all of which stay on your device and are never sent automatically with requests the way cookies are. There's no cross-site tracking and no third-party tracking technology involved.</div>
-        </div>
-      </div>
-
+      <div id="faq-dynamic-list"><div style="font-size:12px;color:var(--text3);padding:20px 0">Loading...</div></div>
     </div>
   </div>
-
 </div><!-- end layout -->
 
 <!-- BOTTOM BAR -->
@@ -1038,8 +767,8 @@ const ENTITY_RELATIONS = {
 // ─────────────────────────────────────────────
 // CONFIG
 // ─────────────────────────────────────────────
-const CLIENT_VERSION = '1.14.4';
-const SERVER_URL = 'https://DEV-SERVER-URL-HERE.onrender.com';
+const CLIENT_VERSION = '1.15.1';
+const SERVER_URL = 'https://whos-behind-that-server-dev.onrender.com';
 const DAILY_LIMIT = 10;
 const CONTACT_EMAIL = 'contact@whosbehindthat.com'; // replace with real email
 
@@ -1111,6 +840,7 @@ function showPage(name, el) {
   if (name === 'history') { renderHistory(); applyClientFilters(); }
   if (name === 'investigate') { updateClientInvestigateUI(); }
   if (name === 'clusters') { renderClientClusters(); }
+  if (name === 'faq') { renderClientFaq(); }
   if (history.state && history.state.page !== name) {
     history.pushState({ page: name }, '', '#' + name);
   }
@@ -1130,6 +860,7 @@ window.addEventListener('popstate', function(e) {
   if (name === 'history') { renderHistory(); applyClientFilters(); }
   if (name === 'investigate') { updateClientInvestigateUI(); }
   if (name === 'clusters') { renderClientClusters(); }
+  if (name === 'faq') { renderClientFaq(); }
   setMobileTab(name);
 });
 
@@ -1768,7 +1499,7 @@ function renderHistory() {
   const platformIcon = {x:'𝕏', instagram:'📷', facebook:'f', news:'📰', unknown:'🔗'};
   list.innerHTML = h.map(function(e) {
     const d = new Date(e.ts);
-    const dateStr = d.toLocaleDateString() + ' ' + d.toLocaleTimeString([],{hour:'2-digit',minute:'2-digit'});
+    const dateStr = d.toLocaleDateString('en-GB',{day:'2-digit',month:'2-digit',year:'numeric'}) + ' ' + d.toLocaleTimeString([],{hour:'2-digit',minute:'2-digit'});
     const scanId = e.scanId || ('WBT-legacy-' + e.id);
     const icon = platformIcon[e.platform||'unknown']||'🔗';
     if (e.failed) {
@@ -1888,7 +1619,7 @@ function renderClientHistoryList(entries) {
   const h = getHistory();
   list.innerHTML = entries.map(function(e) {
     const d = new Date(e.ts);
-    const dateStr = d.toLocaleDateString() + ' ' + d.toLocaleTimeString([],{hour:'2-digit',minute:'2-digit'});
+    const dateStr = d.toLocaleDateString('en-GB',{day:'2-digit',month:'2-digit',year:'numeric'}) + ' ' + d.toLocaleTimeString([],{hour:'2-digit',minute:'2-digit'});
     const scanId = e.scanId || ('WBT-legacy-' + e.id);
     const icon = platformIcon[e.platform||'unknown']||'🔗';
     if (e.failed) {
@@ -1924,11 +1655,41 @@ function updateClientInvestigateUI() {
   const basketCount = document.getElementById('client-basket-count');
   const banner = document.getElementById('client-pending-banner');
   const text = document.getElementById('client-pending-text');
+  const listEl = document.getElementById('client-pending-basket-list');
   if (countEl) { countEl.textContent = basket.length; countEl.style.display = basket.length > 0 ? 'inline-block' : 'none'; }
   if (basketCount) basketCount.textContent = basket.length;
-  if (banner) { banner.style.display = basket.length > 0 ? 'flex' : 'none'; }
+  if (banner) banner.style.display = basket.length > 0 ? 'block' : 'none';
   if (text) text.textContent = basket.length + ' post' + (basket.length > 1 ? 's' : '') + ' pending investigation';
+  if (listEl) {
+    listEl.innerHTML = basket.map(function(p) {
+      const d = p.ts ? new Date(p.ts) : null;
+      const dateStr = d ? d.toLocaleDateString('en-GB',{day:'2-digit',month:'2-digit',year:'numeric'}) : '—';
+      const primary = (p.topMatches||[])[0] || '—';
+      const secondary = (p.topMatches||[])[1] || '';
+      return '<div style="display:flex;align-items:flex-start;gap:8px;padding:5px 0;border-top:1px solid rgba(26,107,255,.15)">' +
+        '<div style="flex:1;min-width:0">' +
+          '<div style="display:flex;align-items:center;gap:6px;flex-wrap:wrap;margin-bottom:2px">' +
+            '<span style="font-size:11px;font-weight:700;color:var(--blue)">' + escHtml(primary) + (p.overallScore ? ' · ' + p.overallScore + '%' : '') + '</span>' +
+            (secondary ? '<span style="font-size:10px;color:var(--text3)">/ ' + escHtml(secondary) + '</span>' : '') +
+            '<span style="font-size:10px;color:var(--text3);margin-left:auto">' + dateStr + '</span>' +
+          '</div>' +
+          '<div style="font-family:var(--mono);font-size:9px;color:var(--text3)">' + escHtml(p.scanId) + '</div>' +
+        '</div>' +
+        '<button onclick="removeClientPendingPost(\'' + escHtml(p.scanId) + '\')" style="background:none;border:none;color:var(--text3);cursor:pointer;font-size:14px;padding:0 2px;flex-shrink:0;line-height:1">×</button>' +
+      '</div>';
+    }).join('');
+  }
   renderClientBasket();
+}
+function removeClientPendingPost(scanId) {
+  removeFromClientInvestigation(scanId);
+  const btn = document.getElementById('inv-btn-' + scanId);
+  if (btn) { btn.textContent = '+ Investigate'; btn.style.background = 'var(--blue-dim)'; btn.style.color = 'var(--blue)'; }
+}
+async function openAndRunClientInvestigation() {
+  showPage('investigate', document.getElementById('nav-investigate'));
+  setMobileTab('investigate');
+  await runClientInvestigation();
 }
 function addToClientInvestigation(scanId) {
   const h = getHistory();
@@ -1968,13 +1729,46 @@ function renderClientBasket() {
       '<span style="font-family:var(--mono);font-size:10px;color:var(--text3)">' + escHtml(e.scanId) + '</span>' +
       '<span style="flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:var(--text2)">' + escHtml(e.url||'') + '</span>' +
       '<span style="font-family:var(--mono);font-size:11px;font-weight:700;color:var(--blue)">' + (e.overallScore||0) + '%</span>' +
-      (d ? '<span style="font-size:10px;color:var(--text3);flex-shrink:0">' + d.toLocaleDateString() + '</span>' : '') +
+      (d ? '<span style="font-size:10px;color:var(--text3);flex-shrink:0">' + d.toLocaleDateString('en-GB',{day:'2-digit',month:'2-digit',year:'numeric'}) + '</span>' : '') +
     '</div>';
   }).join('');
 }
 
 // ─── CLIENT RUN INVESTIGATION ───
 // ─── CLIENT CLUSTER ID + SAVE + HISTORY ───
+function wbtShowTlPopup(event, uid, idx) {
+  const data = (window._wbtTl||{})[uid];
+  if (!data) return;
+  const d = data[idx]; if (!d) return;
+  const pop = document.getElementById(uid+'_pop');
+  const card = document.getElementById(uid+'_card');
+  if (!pop||!card) return;
+  let html = '<div style="font-weight:700;color:#1e293b;font-size:12px;margin-bottom:5px">'+escHtml(d.label)+'</div>';
+  html += '<div style="font-size:10px;color:#64748b;font-weight:600;text-transform:uppercase;letter-spacing:.05em">Primary</div>';
+  html += '<div style="font-size:11px;color:#1e293b;margin-bottom:4px">'+escHtml(d.primary)+' &bull; '+d.score+'%</div>';
+  if (d.secondary) {
+    html += '<div style="font-size:10px;color:#64748b;font-weight:600;text-transform:uppercase;letter-spacing:.05em">Secondary</div>';
+    html += '<div style="font-size:11px;color:#475569;margin-bottom:4px">'+escHtml(d.secondary)+'</div>';
+  }
+  if (d.date) html += '<div style="font-size:10px;color:#94a3b8;margin-bottom:4px">'+escHtml(d.date)+'</div>';
+  if (d.summary) html += '<div style="font-size:10px;color:#475569;font-style:italic;line-height:1.5">'+escHtml(d.summary)+'</div>';
+  pop.innerHTML = html;
+  pop.style.display = 'block';
+  const rect = card.getBoundingClientRect();
+  const popW = 220;
+  const spaceRight = window.innerWidth - event.clientX;
+  if (spaceRight < popW + 20) {
+    pop.style.left = (event.clientX - rect.left - popW - 12) + 'px';
+  } else {
+    pop.style.left = (event.clientX - rect.left + 12) + 'px';
+  }
+  pop.style.top = (event.clientY - rect.top - 10) + 'px';
+}
+function wbtHideTlPopup(uid) {
+  const pop = document.getElementById(uid+'_pop');
+  if (pop) pop.style.display = 'none';
+}
+
 function generateClientClusterId(srvVer) {
   const now = new Date();
   const date = now.getFullYear().toString() + String(now.getMonth()+1).padStart(2,'0') + String(now.getDate()).padStart(2,'0');
@@ -2009,6 +1803,37 @@ async function loadClientClusters() {
     return data.clusters || [];
   } catch(e) { return []; }
 }
+async function renderClientFaq() {
+  const el = document.getElementById('faq-dynamic-list');
+  if (!el) return;
+  el.innerHTML = '<div style="font-size:12px;color:var(--text3);padding:8px 0">Loading...</div>';
+  try {
+    const res = await fetch(SERVER_URL + '/faq/list');
+    if (!res.ok) throw new Error('Failed to load FAQs');
+    const data = await res.json();
+    const faqs = data.faqs || [];
+    if (!faqs.length) { el.innerHTML = '<div style="font-size:12px;color:var(--text3)">No FAQs available.</div>'; return; }
+    const groups = {};
+    faqs.forEach(function(f) {
+      const g = f.group || 'General';
+      if (!groups[g]) groups[g] = [];
+      groups[g].push(f);
+    });
+    let html = '';
+    Object.keys(groups).forEach(function(g) {
+      html += '<div class="faq-group"><div class="faq-group-label">' + escHtml(g) + '</div>';
+      groups[g].forEach(function(f) {
+        html += '<div class="faq-item"><div class="faq-q" onclick="toggleFaq(this)"><span>' + escHtml(f.question) + '</span><svg class="faq-chevron" viewBox="0 0 12 12"><path d="M2 4l4 4 4-4" stroke="currentColor" stroke-width="1.5" fill="none" stroke-linecap="round"/></svg></div>';
+        html += '<div class="faq-a">' + escHtml(f.answer) + '</div></div>';
+      });
+      html += '</div>';
+    });
+    el.innerHTML = html;
+  } catch(e) {
+    el.innerHTML = '<div style="font-size:12px;color:var(--text3)">Could not load FAQs.</div>';
+  }
+}
+
 function renderClientClusters() {
   const el = document.getElementById('client-clusters-list');
   if (!el) return;
@@ -2021,7 +1846,7 @@ function renderClientClusters() {
     window._wbtClientClustersCache = clusters;
     el.innerHTML = clusters.map(function(c, idx) {
       const d = c.ts ? new Date(c.ts) : null;
-      const dateStr = d ? d.toLocaleDateString() + ' ' + d.toLocaleTimeString([],{hour:'2-digit',minute:'2-digit'}) : '—';
+      const dateStr = d ? d.toLocaleDateString('en-GB',{day:'2-digit',month:'2-digit',year:'numeric'}) + ' ' + d.toLocaleTimeString([],{hour:'2-digit',minute:'2-digit'}) : '—';
       return '<div class="card" style="margin-bottom:10px;cursor:pointer" onclick="openClientClusterFromHistory(' + idx + ')">' +
         '<div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-bottom:6px">' +
           '<span style="font-family:var(--mono);font-size:9px;color:var(--text3)">' + escHtml(c.id) + '</span>' +
@@ -2124,129 +1949,158 @@ const CLIENT_CLUSTER_COLORS = [
 function renderClientTimeline(basket, clusters, isolated, postClusterMap, connections) {
   if (!basket || basket.length === 0) return '';
   const sorted = basket.slice().sort(function(a,b){ return new Date(a.ts||0) - new Date(b.ts||0); });
-  const W = 560, H = 250, PAD = 36, BOTTOM = 180, nodeR = 17;
+
+  const NO_ENTITY = 'No detected entity';
+  const entityOrder = [];
+  sorted.forEach(function(p) {
+    const e = (p.topMatches||[])[0] || NO_ENTITY;
+    if (!entityOrder.includes(e)) entityOrder.push(e);
+  });
+
+  const LABEL_W = 120, BUFFER = 2, POST_START = LABEL_W + BUFFER;
+  const W = 560, nodeR = 16, LANE_H = 65, TOP_PAD = 32, BOTTOM_PAD = 46;
+  const H = TOP_PAD + entityOrder.length * LANE_H + BOTTOM_PAD;
+  const AXIS_Y = H - BOTTOM_PAD + 10;
+  const DRAW_W = W - POST_START - 12;
+
   const times = sorted.map(function(p){ return new Date(p.ts||0).getTime(); });
   const tMin = Math.min.apply(null,times), tMax = Math.max.apply(null,times);
   const tRange = tMax - tMin || 1;
 
-  // Group posts by date for same-date offset
-  const dateGroups = {};
+  const laneGroups = {};
   sorted.forEach(function(p) {
-    const d = p.ts ? new Date(p.ts) : new Date(0);
-    const key = d.toLocaleDateString('en-GB',{day:'2-digit',month:'short'});
-    if (!dateGroups[key]) dateGroups[key] = [];
-    dateGroups[key].push(p.scanId);
+    const e = (p.topMatches||[])[0] || NO_ENTITY;
+    const key = e + '|' + (p.ts ? new Date(p.ts).toLocaleDateString('en-GB') : '');
+    if (!laneGroups[key]) laneGroups[key] = [];
+    laneGroups[key].push(p.scanId);
   });
 
   function xOf(p) {
     const d = p.ts ? new Date(p.ts) : new Date(0);
-    const key = d.toLocaleDateString('en-GB',{day:'2-digit',month:'short'});
-    const group = dateGroups[key];
+    const e = (p.topMatches||[])[0] || NO_ENTITY;
+    const key = e + '|' + d.toLocaleDateString('en-GB');
+    const group = laneGroups[key] || [];
     const idx = group.indexOf(p.scanId);
-    const baseX = PAD + (d.getTime() - tMin) / tRange * (W - 2*PAD);
-    const offset = group.length > 1 ? (idx - (group.length-1)/2) * (nodeR*2 + 4) : 0;
-    return baseX + offset;
+    const baseX = POST_START + (d.getTime() - tMin) / tRange * DRAW_W;
+    const offset = group.length > 1 ? (idx - (group.length-1)/2) * (nodeR*2+4) : 0;
+    return Math.max(POST_START+nodeR, Math.min(W-12-nodeR, baseX+offset));
   }
+
   function yOf(scanId) {
-    const cis = postClusterMap[scanId];
-    if (!cis || cis.length === 0) return BOTTOM - 18;
-    return BOTTOM - 72 - (cis[0] * 18);
+    const p = sorted.find(function(q){ return q.scanId===scanId; });
+    if (!p) return TOP_PAD + nodeR;
+    const e = (p.topMatches||[])[0] || NO_ENTITY;
+    return TOP_PAD + entityOrder.indexOf(e) * LANE_H + Math.floor(LANE_H/2);
   }
 
-  let svg = '<div class="card" style="padding:12px 14px 10px;margin-bottom:10px;overflow:visible"><svg width="100%" viewBox="0 0 ' + W + ' ' + H + '" style="overflow:visible">';
+  function wrapLabel(name) {
+    const MAX = 16;
+    if (name.length <= MAX) return [name];
+    let b = name.lastIndexOf(' ', MAX); if (b<2) b=MAX;
+    const l1 = name.slice(0,b).trim(), rest = name.slice(b).trim();
+    if (rest.length <= MAX) return [l1, rest];
+    let b2 = rest.lastIndexOf(' ', MAX); if (b2<2) b2=MAX;
+    return [l1, rest.slice(0,b2).trim(), rest.slice(b2).trim()];
+  }
 
-  // Axis
-  svg += '<line x1="' + PAD + '" y1="' + BOTTOM + '" x2="' + (W-PAD) + '" y2="' + BOTTOM + '" stroke="var(--border)" stroke-width="1"/>';
-
-  // Date ticks — deduplicate, skip if too close
-  const shownDates = new Set();
-  let lastLabelX = -999;
-  const MIN_GAP = 48;
-  sorted.forEach(function(p) {
+  const uid = 'ctl' + Math.random().toString(36).slice(2,6);
+  window._wbtTl = window._wbtTl || {};
+  window._wbtTl[uid] = sorted.map(function(p, idx) {
     const d = p.ts ? new Date(p.ts) : null;
-    if (!d) return;
-    const dateKey = d.toLocaleDateString('en-GB',{day:'2-digit',month:'short'});
-    if (!shownDates.has(dateKey)) {
-      shownDates.add(dateKey);
-      const baseX = PAD + (d.getTime() - tMin) / tRange * (W - 2*PAD);
-      svg += '<line x1="' + baseX + '" y1="' + (BOTTOM-3) + '" x2="' + baseX + '" y2="' + (BOTTOM+3) + '" stroke="var(--border)" stroke-width="1"/>';
-      if (baseX - lastLabelX >= MIN_GAP) {
-        svg += '<text font-family="Nunito,sans-serif" font-size="9" fill="var(--text3)" x="' + baseX + '" y="' + (BOTTOM+13) + '" text-anchor="middle">' + dateKey + '</text>';
-        lastLabelX = baseX;
+    return {
+      label: 'P' + (idx+1),
+      primary: (p.topMatches||[])[0] || NO_ENTITY,
+      score: (p.overallScore||0),
+      secondary: (p.topMatches||[])[1] || '',
+      date: d ? d.toLocaleDateString('en-GB',{day:'2-digit',month:'2-digit',year:'numeric'}) : '',
+      summary: p._summary || ''
+    };
+  });
+
+  let out = '<div class="card" style="padding:10px 12px 8px;margin-bottom:10px;overflow:auto;position:relative" id="' + uid + '_card">';
+  out += '<div id="' + uid + '_pop" style="display:none;position:absolute;background:#fff;border:1px solid #cfe0f5;border-radius:8px;padding:8px 10px;box-shadow:0 4px 16px rgba(15,39,68,.12);z-index:100;pointer-events:none;min-width:160px;max-width:220px;font-family:var(--sans)"></div>';
+
+  let svg = '<svg width="100%" viewBox="0 0 ' + W + ' ' + H + '" style="overflow:visible;min-width:' + W + 'px">';
+
+  entityOrder.forEach(function(e, i) {
+    const laneY = TOP_PAD + i * LANE_H;
+    const laneCY = laneY + Math.floor(LANE_H/2);
+    const isNone = e === NO_ENTITY;
+    svg += '<rect x="0" y="' + laneY + '" width="' + W + '" height="' + LANE_H + '" fill="' + (isNone?'#f8f6f3':'#eff6ff') + '" opacity="0.5"/>';
+    svg += '<line x1="' + LABEL_W + '" y1="' + laneY + '" x2="' + LABEL_W + '" y2="' + (laneY+LANE_H) + '" stroke="#deeaf8" stroke-width="0.5"/>';
+    const lines = wrapLabel(e);
+    const lineH = 10, totalH = (lines.length-1)*lineH;
+    const startY = laneCY - totalH/2;
+    lines.forEach(function(line, li) {
+      svg += '<text font-family="Nunito,sans-serif" font-size="8" font-weight="600" fill="' + (isNone?'#94a3b8':'#475569') + '" x="6" y="' + (startY+li*lineH) + '">' + escHtml(line) + '</text>';
+    });
+  });
+
+  svg += '<line x1="' + POST_START + '" y1="' + AXIS_Y + '" x2="' + (W-8) + '" y2="' + AXIS_Y + '" stroke="#cfe0f5" stroke-width="1"/>';
+
+  const shownDates = new Set(); let lastLX = -999;
+  sorted.forEach(function(p) {
+    const d = p.ts ? new Date(p.ts) : null; if (!d) return;
+    const dk = d.toLocaleDateString('en-GB',{day:'2-digit',month:'short'});
+    if (!shownDates.has(dk)) {
+      shownDates.add(dk);
+      const bx = POST_START + (d.getTime()-tMin)/tRange*DRAW_W;
+      svg += '<line x1="' + bx + '" y1="' + (AXIS_Y-3) + '" x2="' + bx + '" y2="' + (AXIS_Y+3) + '" stroke="#cfe0f5" stroke-width="1"/>';
+      if (bx-lastLX >= 44) {
+        svg += '<text font-family="Nunito,sans-serif" font-size="9" fill="#94a3b8" x="' + bx + '" y="' + (AXIS_Y+14) + '" text-anchor="middle">' + dk + '</text>';
+        lastLX = bx;
       }
     }
   });
 
-  // Connection arcs
   connections.forEach(function(conn) {
-    const pa = sorted.find(function(p){ return p.scanId === conn.postA; });
-    const pb = sorted.find(function(p){ return p.scanId === conn.postB; });
-    if (!pa || !pb) return;
-    const x1 = xOf(pa), x2 = xOf(pb);
-    const y1 = yOf(conn.postA), y2 = yOf(conn.postB);
-    const cis = postClusterMap[conn.postA] || [];
-    const color = cis.length > 0 ? CLIENT_CLUSTER_COLORS[cis[0] % CLIENT_CLUSTER_COLORS.length].border : 'var(--border)';
-    const cx = (x1+x2)/2, cy = Math.min(y1,y2) - 24;
-    svg += '<path d="M' + x1 + ' ' + y1 + ' Q ' + cx + ' ' + cy + ' ' + x2 + ' ' + y2 + '" fill="none" stroke="' + color + '" stroke-width="1.4" stroke-dasharray="5 4"/>';
+    const pa = sorted.find(function(p){ return p.scanId===conn.postA; });
+    const pb = sorted.find(function(p){ return p.scanId===conn.postB; });
+    if (!pa||!pb) return;
+    const x1=xOf(pa), x2=xOf(pb), y1=yOf(conn.postA), y2=yOf(conn.postB);
+    const cis = postClusterMap[conn.postA]||[];
+    const col = cis.length>0 ? CLIENT_CLUSTER_COLORS[cis[0]%CLIENT_CLUSTER_COLORS.length].border : '#cfe0f5';
+    svg += '<path d="M'+x1+' '+y1+' Q '+((x1+x2)/2)+' '+(Math.min(y1,y2)-16)+' '+x2+' '+y2+'" fill="none" stroke="'+col+'" stroke-width="1.4" stroke-dasharray="5 4"/>';
   });
 
-  // Cluster label pills
   clusters.forEach(function(cluster, ci) {
-    const color = CLIENT_CLUSTER_COLORS[ci % CLIENT_CLUSTER_COLORS.length];
-    const clusterPs = cluster.map(function(id){ return sorted.find(function(p){ return p.scanId === id; }); }).filter(Boolean);
-    if (clusterPs.length < 2) return;
-    const xs = clusterPs.map(xOf);
-    const midX = (Math.min.apply(null,xs) + Math.max.apply(null,xs)) / 2;
-    const topY = yOf(cluster[0]) - 42;
-    svg += '<rect x="' + (midX-28) + '" y="' + (topY-7) + '" width="56" height="14" rx="7" fill="' + color.bg + '" stroke="' + color.border + '" stroke-width="0.5"/>';
-    svg += '<text font-family="Nunito,sans-serif" font-size="7" font-weight="700" fill="' + color.text + '" x="' + midX + '" y="' + (topY+3) + '" text-anchor="middle" letter-spacing="0.4">CLUSTER ' + String.fromCharCode(65+ci) + '</text>';
+    const col = CLIENT_CLUSTER_COLORS[ci%CLIENT_CLUSTER_COLORS.length];
+    const pts = cluster.map(function(id){ return sorted.find(function(p){ return p.scanId===id; }); }).filter(Boolean);
+    if (pts.length<2) return;
+    const xs=pts.map(xOf), midX=(Math.min.apply(null,xs)+Math.max.apply(null,xs))/2;
+    const minY=Math.min.apply(null,cluster.map(yOf)), pillY=Math.max(10,minY-20);
+    svg += '<rect x="'+(midX-26)+'" y="'+(pillY-6)+'" width="52" height="13" rx="6" fill="'+col.bg+'" stroke="'+col.border+'" stroke-width="0.5"/>';
+    svg += '<text font-family="Nunito,sans-serif" font-size="7" font-weight="700" fill="'+col.text+'" x="'+midX+'" y="'+(pillY+3)+'" text-anchor="middle" letter-spacing="0.4">CLUSTER '+col.label+'</text>';
   });
 
-  // Post nodes
-  sorted.forEach(function(p) {
-    const x = xOf(p), y = yOf(p.scanId);
-    const cis = postClusterMap[p.scanId] || [];
-    const isIsolated = cis.length === 0;
-    const isMulti = cis.length > 1;
-    const idx = sorted.indexOf(p) + 1;
+  sorted.forEach(function(p, pidx) {
+    const x=xOf(p), y=yOf(p.scanId);
+    const cis=postClusterMap[p.scanId]||[];
+    const isIso=cis.length===0, isMulti=cis.length>1;
+    const num=pidx+1;
 
     if (isMulti) {
-      const c0 = CLIENT_CLUSTER_COLORS[cis[0] % CLIENT_CLUSTER_COLORS.length];
-      const c1 = CLIENT_CLUSTER_COLORS[cis[1] % CLIENT_CLUSTER_COLORS.length];
-      svg += '<path d="M' + x + ' ' + (y-nodeR) + ' A ' + nodeR + ' ' + nodeR + ' 0 0 1 ' + x + ' ' + (y+nodeR) + '" fill="none" stroke="' + c1.border + '" stroke-width="4"/>';
-      svg += '<path d="M' + x + ' ' + (y-nodeR) + ' A ' + nodeR + ' ' + nodeR + ' 0 0 0 ' + x + ' ' + (y+nodeR) + '" fill="none" stroke="' + c0.border + '" stroke-width="4"/>';
-      svg += '<circle cx="' + x + '" cy="' + y + '" r="' + (nodeR-4) + '" fill="white"/>';
-      svg += '<rect x="' + (x-20) + '" y="' + (y-nodeR-13) + '" width="40" height="11" rx="5" fill="#1e293b"/>';
-      svg += '<text font-family="Nunito,sans-serif" font-size="7" font-weight="700" fill="#fff" x="' + x + '" y="' + (y-nodeR-4) + '" text-anchor="middle">2 clusters</text>';
-    } else if (isIsolated) {
-      svg += '<circle cx="' + x + '" cy="' + y + '" r="' + nodeR + '" fill="#f1efe8" stroke="#b4b2a9" stroke-width="1"/>';
+      const c0=CLIENT_CLUSTER_COLORS[cis[0]%CLIENT_CLUSTER_COLORS.length], c1=CLIENT_CLUSTER_COLORS[cis[1]%CLIENT_CLUSTER_COLORS.length];
+      svg += '<path d="M'+x+' '+(y-nodeR)+' A '+nodeR+' '+nodeR+' 0 0 1 '+x+' '+(y+nodeR)+'" fill="none" stroke="'+c1.border+'" stroke-width="4"/>';
+      svg += '<path d="M'+x+' '+(y-nodeR)+' A '+nodeR+' '+nodeR+' 0 0 0 '+x+' '+(y+nodeR)+'" fill="none" stroke="'+c0.border+'" stroke-width="4"/>';
+      svg += '<circle cx="'+x+'" cy="'+y+'" r="'+(nodeR-3)+'" fill="white"/>';
+    } else if (isIso) {
+      svg += '<circle cx="'+x+'" cy="'+y+'" r="'+nodeR+'" fill="#f1efe8" stroke="#b4b2a9" stroke-width="1"/>';
     } else {
-      const color = CLIENT_CLUSTER_COLORS[cis[0] % CLIENT_CLUSTER_COLORS.length];
-      svg += '<circle cx="' + x + '" cy="' + y + '" r="' + nodeR + '" fill="' + color.bg + '" stroke="' + color.border + '" stroke-width="1.5"/>';
+      const col=CLIENT_CLUSTER_COLORS[cis[0]%CLIENT_CLUSTER_COLORS.length];
+      svg += '<circle cx="'+x+'" cy="'+y+'" r="'+nodeR+'" fill="'+col.bg+'" stroke="'+col.border+'" stroke-width="1.5"/>';
     }
 
-    const textColor = isMulti ? '#1e293b' : isIsolated ? '#888780' : CLIENT_CLUSTER_COLORS[cis[0] % CLIENT_CLUSTER_COLORS.length].text;
-    svg += '<text font-family="Nunito,sans-serif" font-size="10" font-weight="700" fill="' + textColor + '" x="' + x + '" y="' + (y-3) + '" text-anchor="middle">P' + idx + '</text>';
-    svg += '<text font-family="Nunito,sans-serif" font-size="8" fill="' + textColor + '" x="' + x + '" y="' + (y+9) + '" text-anchor="middle">' + (p.overallScore||0) + '%</text>';
-    // Stack title labels vertically for same-date posts, clamp X to frame
-    const pd = p.ts ? new Date(p.ts) : new Date(0);
-    const pDateKey = pd.toLocaleDateString('en-GB',{day:'2-digit',month:'short'});
-    const pGroup = dateGroups[pDateKey] || [];
-    const pGroupIdx = pGroup.indexOf(p.scanId);
-    const fullTitle = (p._summary || (p.topMatches||[])[0] || '');
-    const shortTitle = fullTitle.slice(0, 18) + (fullTitle.length > 18 ? '…' : '');
-    const titleY = BOTTOM + 24 + (pGroupIdx * 11);
-    const labelX = Math.max(PAD + 28, Math.min(W - PAD - 28, x));
-    const anchor2 = Math.abs(labelX - x) < 3 ? 'middle' : (labelX < x ? 'start' : 'end');
-    svg += '<text font-family="Nunito,sans-serif" font-size="9" fill="var(--text3)" x="' + labelX + '" y="' + titleY + '" text-anchor="' + anchor2 + '">' +
-      '<title>' + escHtml(fullTitle) + '</title>' + escHtml(shortTitle) +
-    '</text>';
+    const tc = isMulti?'#1e293b':isIso?'#888780':CLIENT_CLUSTER_COLORS[cis[0]%CLIENT_CLUSTER_COLORS.length].text;
+    svg += '<text font-family="Nunito,sans-serif" font-size="9" font-weight="700" fill="'+tc+'" x="'+x+'" y="'+(y-2)+'" text-anchor="middle" style="pointer-events:none">P'+num+'</text>';
+    svg += '<text font-family="Nunito,sans-serif" font-size="8" fill="'+tc+'" x="'+x+'" y="'+(y+8)+'" text-anchor="middle" style="pointer-events:none">'+(p.overallScore||0)+'%</text>';
+    svg += '<circle cx="'+x+'" cy="'+y+'" r="'+nodeR+'" fill="transparent" style="cursor:pointer" onmouseenter="wbtShowTlPopup(event,&quot;'+uid+'&quot;,'+pidx+')" onmouseleave="wbtHideTlPopup(&quot;'+uid+'&quot;)" />';
   });
 
-  svg += '</svg></div>';
-  return svg;
+  svg += '</svg>';
+  out += svg + '</div>';
+  return out;
 }
-
 function renderClientLegend(basket, clusters, isolated, postClusterMap) {
   const sorted = basket.slice().sort(function(a,b){ return new Date(a.ts||0) - new Date(b.ts||0); });
   const includedIds = clusters.flat();
@@ -2260,13 +2114,16 @@ function renderClientLegend(basket, clusters, isolated, postClusterMap) {
       const idx = sorted.indexOf(p) + 1;
       const color = cis.length > 0 ? CLIENT_CLUSTER_COLORS[cis[0] % CLIENT_CLUSTER_COLORS.length] : CLIENT_CLUSTER_COLORS[0];
       const d = p.ts ? new Date(p.ts) : null;
+      const secondary = (p.topMatches||[])[1] || '';
       html += '<div style="padding:6px 0;border-top:1px solid var(--border)">';
-      html += '<div style="display:flex;align-items:center;gap:8px;font-size:12px">';
+      html += '<div style="display:flex;align-items:center;gap:8px;font-size:12px;flex-wrap:wrap">';
       html += '<span style="display:inline-flex;align-items:center;justify-content:center;width:20px;height:20px;border-radius:50%;background:' + color.bg + ';border:1.5px solid ' + color.border + ';font-size:9px;font-weight:700;color:' + color.text + ';flex-shrink:0">P' + idx + '</span>';
       html += '<span style="font-weight:700;color:var(--text);font-size:11px">' + escHtml((p.topMatches||[])[0] || p.overallLabel || '') + '</span>';
       html += '<span style="font-family:var(--mono);font-size:10px;font-weight:700;color:' + color.text + ';background:' + color.bg + ';border:1px solid ' + color.border + ';border-radius:99px;padding:1px 7px">' + (p.overallScore||0) + '%</span>';
-      if (d) html += '<span style="font-size:10px;color:var(--text3);margin-left:auto">' + d.toLocaleDateString() + '</span>';
+      if (d) html += '<span style="font-size:10px;color:var(--text3)">' + d.toLocaleDateString('en-GB',{day:'2-digit',month:'2-digit',year:'numeric'}) + '</span>';
+      if (p.url) html += '<a href="' + escHtml(p.url) + '" target="_blank" rel="noopener" style="font-size:10px;color:var(--blue);font-weight:700;text-decoration:none;margin-left:auto;flex-shrink:0">↗ Go to post</a>';
       html += '</div>';
+      if (secondary) html += '<div style="font-size:11px;color:var(--text3);margin-top:2px;margin-left:28px">Secondary: <span style="color:var(--text2)">' + escHtml(secondary) + '</span></div>';
       if (p._summary) html += '<div style="font-size:11px;color:var(--text2);margin-top:3px;margin-left:28px;font-style:italic;line-height:1.5">' + escHtml(p._summary) + '</div>';
       html += '</div>';
     });
@@ -2276,10 +2133,11 @@ function renderClientLegend(basket, clusters, isolated, postClusterMap) {
     html += '<div style="font-size:10px;font-weight:700;color:var(--text3);margin-top:10px;margin-bottom:5px;text-transform:uppercase;letter-spacing:.06em">Omitted</div>';
     sorted.filter(function(p){ return isolated.includes(p.scanId); }).forEach(function(p) {
       const idx = sorted.indexOf(p) + 1;
-      html += '<div style="display:flex;align-items:center;gap:8px;padding:6px 0;border-top:1px solid var(--border);font-size:11px">';
+      html += '<div style="display:flex;align-items:center;gap:8px;padding:6px 0;border-top:1px solid var(--border);font-size:11px;flex-wrap:wrap">';
       html += '<span style="display:inline-flex;align-items:center;justify-content:center;width:20px;height:20px;border-radius:50%;background:#f1efe8;border:1px solid #b4b2a9;font-size:9px;font-weight:700;color:#888780;flex-shrink:0">P' + idx + '</span>';
       html += '<span style="color:var(--text3)">' + escHtml((p.topMatches||[])[0] || p.overallLabel || '') + '</span>';
-      html += '<span style="font-size:10px;color:var(--text3);margin-left:auto;font-style:italic">No connection</span>';
+      html += '<span style="font-size:10px;color:var(--text3);font-style:italic">No connection</span>';
+      if (p.url) html += '<a href="' + escHtml(p.url) + '" target="_blank" rel="noopener" style="font-size:10px;color:var(--blue);font-weight:700;text-decoration:none;margin-left:auto">↗ Go to post</a>';
       html += '</div>';
     });
   }
@@ -2380,6 +2238,9 @@ async function runClientInvestigation() {
     await Promise.allSettled(results.map(function(s, i) {
       return saveClientCluster(s, clusters[i], isolated, srvVerMatch, clientClusterIds[i]);
     }));
+    // Clear basket after successful investigation
+    saveClientBasket([]);
+    updateClientInvestigateUI();
   } catch(err) {
     resultsEl.innerHTML = '<div class="card"><div style="font-size:12px;color:var(--red)">Investigation failed: ' + escHtml(err.message) + '</div></div>';
   }
