@@ -1,3 +1,17 @@
+### v1.15.1 — bug fix (client-dev) | Server: v1.19.1 | Admin: v2.13.8
+- Fixed server connection error on load — SERVER_URL was pointing at placeholder instead of https://whos-behind-that-server-dev.onrender.com
+
+### v1.15.0 (client-dev) | Server: v1.19.1 | Admin: v2.13.8
+- Timeline: Y-axis entity lanes — same design as admin v2.13.x (LABEL_W=120, entity labels wrap, hover popup, no secondary below circles)
+- Timeline: hover popup shows primary, secondary, date, summary; flips left when near right edge
+- Legend: secondary entity shown between primary and post summary; ↗ Go to post link added
+- Post history: pending banner expanded — shows basket posts with primary, secondary, date, scan ID, × remove button
+- Post history: "Run investigation →" auto-navigates to Investigate tab and runs immediately
+- FAQ: now fetched dynamically from server DB instead of hardcoded HTML
+- All dates: switched to DD/MM/YYYY format throughout
+- App version in bottom bar and topbar: always reads from CLIENT_VERSION constant — fixes stale version showing
+- Basket cleared after investigation runs successfully
+
 ### v1.14.4 — bug fix (client-dev) | Server: v1.18.3 | Admin: v2.12.4
 - Timeline: same label clamping and hover tooltip fixes as admin
 - Cluster cards: cluster ID shown at top, editable name field with Save button
