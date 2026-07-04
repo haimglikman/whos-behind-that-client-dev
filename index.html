@@ -772,7 +772,7 @@ const ENTITY_RELATIONS = {
 // ─────────────────────────────────────────────
 // CONFIG
 // ─────────────────────────────────────────────
-const CLIENT_VERSION = '1.15.3';
+const CLIENT_VERSION = '1.15.4';
 const SERVER_URL = 'https://whos-behind-that-server-dev.onrender.com';
 const DAILY_LIMIT = 10;
 const CONTACT_EMAIL = 'contact@whosbehindthat.com'; // replace with real email
@@ -1947,9 +1947,12 @@ function openClientClusterFromHistory(idx) {
   const resultsEl = document.getElementById('client-investigate-results');
   if (!resultsEl) return;
 
+  // Update URL to cluster ID (#4)
+  history.pushState({ page: 'investigate', clusterId: c.id }, '', '#' + c.id);
+
   const summaries = c.postSummaries || [];
-  const color = CLIENT_CLUSTER_COLORS[0];
   const isolated = c.isolatedPostIds || [];
+  const connections = c.connections || [];
 
   // Reconstruct all posts (connected + isolated) from local history
   const h = getHistory();
@@ -1958,31 +1961,50 @@ function openClientClusterFromHistory(idx) {
     const found = h.find(function(e){ return e.scanId === scanId; });
     const isConnected = (c.postIds||[]).includes(scanId);
     const sumIdx = (c.postIds||[]).indexOf(scanId);
+    // #2: attach summary to ALL posts including isolated
     return Object.assign({}, found || { scanId: scanId, url: scanId, postText: '', topMatches: [], overallScore: 0 }, {
-      _summary: isConnected && sumIdx >= 0 ? summaries[sumIdx] || '' : ''
+      _summary: sumIdx >= 0 ? summaries[sumIdx] || '' : ''
     });
   });
   const postClusterMap = {};
   (c.postIds||[]).forEach(function(id){ postClusterMap[id] = [0]; });
 
   let html = '';
-  html += renderClientTimeline(posts, [c.postIds||[]], isolated, postClusterMap, []);
+
+  // #3: Cluster ID prominent at top, above timeline
+  html += '<div style="display:flex;align-items:center;gap:10px;margin-bottom:10px;flex-wrap:wrap">';
+  html += '<a href="' + escHtml('https://haimglikman.github.io/whos-behind-that-client-dev/' + c.id) + '" style="font-family:var(--mono);font-size:11px;font-weight:700;color:var(--blue);background:var(--blue-dim);border:1px solid rgba(26,107,255,.2);border-radius:6px;padding:4px 12px;text-decoration:none">' + escHtml(c.id) + '</a>';
+  const cDate = c.ts ? new Date(c.ts).toLocaleDateString('en-GB',{day:'2-digit',month:'2-digit',year:'numeric'}) : '';
+  if (cDate) html += '<span style="font-size:10px;color:var(--text3)">' + cDate + '</span>';
+  html += '</div>';
+
+  // Timeline + Legend
+  html += renderClientTimeline(posts, [c.postIds||[]], isolated, postClusterMap, connections);
   html += renderClientLegend(posts, [c.postIds||[]], isolated, postClusterMap);
 
   // Synopsis card
   html += '<div class="card" style="margin-bottom:10px">';
-  // Cluster ID header
-  html += '<div style="margin-bottom:10px">';
-  html += '<div style="font-family:var(--mono);font-size:10px;font-weight:700;color:var(--blue);background:var(--blue-dim);border:1px solid rgba(26,107,255,.2);border-radius:6px;padding:3px 10px;display:inline-block;margin-bottom:8px">' + escHtml(c.id) + '</div>';
   // Rename field
+  html += '<div style="margin-bottom:10px">';
   html += '<div style="font-size:10px;font-weight:700;color:var(--text3);text-transform:uppercase;letter-spacing:.07em;margin-bottom:5px">Cluster name</div>';
   html += '<div style="display:flex;gap:8px;align-items:center">';
   html += '<input type="text" class="url-input" style="flex:1;font-size:12px;font-weight:600;color:var(--text);height:32px" id="client-cluster-name-hist" value="' + escHtml(c.clusterName||'') + '" />';
   html += '<button style="background:var(--blue);color:#fff;border:none;border-radius:8px;padding:6px 12px;font-size:11px;font-weight:700;cursor:pointer;font-family:var(--sans);white-space:nowrap" data-cid="' + escHtml(c.id) + '" onclick="renameClientCluster(this.dataset.cid,\'hist\')">Save</button>';
   html += '</div></div>';
-  if (c.connectionType) html += '<div style="font-size:10px;color:var(--text3);font-style:italic;margin-bottom:8px">' + escHtml(c.connectionType) + '</div>';
-  html += '<p style="font-size:12px;line-height:1.7;color:var(--text2);margin-bottom:8px">' + escHtml(c.synopsis||'') + '</p>';
+
+  // Synopsis
+  if (c.connectionType) html += '<div style="font-size:11px;color:var(--text3);font-style:italic;margin-bottom:6px">' + escHtml(c.connectionType) + '</div>';
+  html += '<p style="font-size:12px;line-height:1.7;color:var(--text2);margin-bottom:10px">' + escHtml(c.synopsis||'') + '</p>';
   if (c.dominantEntity) html += '<div style="font-size:11px;color:var(--text3);font-weight:600;margin-bottom:8px">Serves: <span style="color:var(--text2)">' + escHtml(c.dominantEntity) + '</span></div>';
+
+  // #5: Frame and event — prominent, not tiny bottom text
+  if (c.frame || c.event) {
+    html += '<div style="display:flex;flex-wrap:wrap;gap:8px;margin-bottom:8px">';
+    if (c.frame) html += '<div style="background:var(--bg);border:1px solid var(--border);border-radius:6px;padding:5px 10px"><div style="font-size:9px;font-weight:700;color:var(--text3);text-transform:uppercase;letter-spacing:.07em;margin-bottom:2px">Frame</div><div style="font-size:12px;color:var(--text)">' + escHtml(c.frame) + '</div></div>';
+    if (c.event) html += '<div style="background:var(--bg);border:1px solid var(--border);border-radius:6px;padding:5px 10px"><div style="font-size:9px;font-weight:700;color:var(--text3);text-transform:uppercase;letter-spacing:.07em;margin-bottom:2px">Event</div><div style="font-size:12px;color:var(--text)">' + escHtml(c.event) + '</div></div>';
+    html += '</div>';
+  }
+
   if (summaries.length > 0) {
     html += '<div style="border-top:1px solid var(--border);padding-top:8px;margin-top:4px">';
     html += '<div style="font-size:10px;font-weight:700;color:var(--text3);text-transform:uppercase;letter-spacing:.07em;margin-bottom:6px">Posts</div>';
@@ -1992,8 +2014,6 @@ function openClientClusterFromHistory(idx) {
     });
     html += '</div>';
   }
-  if (c.frame) html += '<div style="font-size:10px;color:var(--text3);margin-top:8px">Frame: ' + escHtml(c.frame) + '</div>';
-  if (c.event) html += '<div style="font-size:10px;color:var(--text3)">Event: ' + escHtml(c.event) + '</div>';
   html += '</div>';
 
   resultsEl.innerHTML = html;
@@ -2351,7 +2371,17 @@ window.addEventListener('DOMContentLoaded', function() {
   const emailEl = document.getElementById('contact-email');
   if (emailEl) { emailEl.href = 'mailto:' + CONTACT_EMAIL; emailEl.textContent = CONTACT_EMAIL; }
   const initPage = location.hash.replace('#','') || 'analyze';
-  if (initPage !== 'analyze' && document.getElementById('page-' + initPage)) {
+  // Check if hash is a cluster ID
+  if (initPage.startsWith('WBT-CLU-')) {
+    // Load clusters then open matching one
+    showPage('investigate', document.getElementById('nav-investigate'));
+    setMobileTab('investigate');
+    loadClientClusters().then(function(clusters) {
+      window._wbtClientClustersCache = clusters;
+      const idx = clusters.findIndex(function(c){ return c.id === initPage; });
+      if (idx >= 0) openClientClusterFromHistory(idx);
+    });
+  } else if (initPage !== 'analyze' && document.getElementById('page-' + initPage)) {
     document.querySelectorAll('.page').forEach(function(p){ p.classList.remove('active'); });
     document.querySelectorAll('.nav-item').forEach(function(n){ n.classList.remove('active'); });
     document.getElementById('page-' + initPage).classList.add('active');
