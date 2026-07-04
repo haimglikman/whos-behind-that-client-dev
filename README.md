@@ -1,3 +1,10 @@
+### v1.15.2 — bug fix (client-dev) | Server: v1.19.2 | Admin: v2.13.8
+- Post history: fixed uneven grid gaps — switched to auto-fill layout
+- Post history: removed separate "News site" filter — merged into "Source" dropdown which auto-populates with news domains found in history (e.g. Ynet appears after first Ynet scan)
+- Post history: entity match now shows a dropdown populated from entities in history, filters by prefix (startsWith) matching admin behavior
+- Clusters history: now shows only the current device's clusters — fixed privacy issue where all users' clusters were visible
+- FAQ: fixed rendering — answers now display correctly with proper formatting
+
 ### v1.15.1 — bug fix (client-dev) | Server: v1.19.1 | Admin: v2.13.8
 - Fixed server connection error on load — SERVER_URL was pointing at placeholder instead of https://whos-behind-that-server-dev.onrender.com
 
