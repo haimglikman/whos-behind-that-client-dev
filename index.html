@@ -480,10 +480,10 @@ body{background:var(--bg);display:flex;flex-direction:column;min-height:100vh}
 
       <!-- History filters -->
       <div style="background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:12px 14px;margin-bottom:10px">
-        <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(140px,1fr));gap:8px;margin-bottom:8px">
-          <div><div style="font-size:10px;font-weight:700;color:var(--text3);text-transform:uppercase;letter-spacing:.07em;margin-bottom:4px">Search by ID</div><input type="text" class="url-input" style="height:32px;font-size:11px" id="cf-scan-id" placeholder="WBT-..." oninput="applyClientFilters()"/></div>
-          <div><div style="font-size:10px;font-weight:700;color:var(--text3);text-transform:uppercase;letter-spacing:.07em;margin-bottom:4px">URL</div><input type="text" class="url-input" style="height:32px;font-size:11px" id="cf-url" placeholder="x.com/..." oninput="applyClientFilters()"/></div>
-          <div><div style="font-size:10px;font-weight:700;color:var(--text3);text-transform:uppercase;letter-spacing:.07em;margin-bottom:4px">Source</div>
+        <div style="display:flex;flex-wrap:wrap;gap:8px;margin-bottom:8px;align-items:flex-end">
+          <div style="flex:1;min-width:120px;max-width:160px"><div style="font-size:10px;font-weight:700;color:var(--text3);text-transform:uppercase;letter-spacing:.07em;margin-bottom:4px">Search by ID</div><input type="text" class="url-input" style="height:32px;font-size:11px;width:100%" id="cf-scan-id" placeholder="WBT-..." oninput="applyClientFilters()"/></div>
+          <div style="flex:1;min-width:120px;max-width:160px"><div style="font-size:10px;font-weight:700;color:var(--text3);text-transform:uppercase;letter-spacing:.07em;margin-bottom:4px">URL</div><input type="text" class="url-input" style="height:32px;font-size:11px;width:100%" id="cf-url" placeholder="x.com/..." oninput="applyClientFilters()"/></div>
+          <div style="flex:0 0 130px"><div style="font-size:10px;font-weight:700;color:var(--text3);text-transform:uppercase;letter-spacing:.07em;margin-bottom:4px">Source</div>
             <select class="url-input" style="height:32px;font-size:11px;padding:0 8px" id="cf-platform" onchange="applyClientFilters()">
               <option value="">All</option>
               <option value="x">X</option>
@@ -491,15 +491,19 @@ body{background:var(--bg);display:flex;flex-direction:column;min-height:100vh}
               <option value="facebook">Facebook</option>
             </select>
           </div>
-          <div><div style="font-size:10px;font-weight:700;color:var(--text3);text-transform:uppercase;letter-spacing:.07em;margin-bottom:4px">Date from</div><input type="date" class="url-input" style="height:32px;font-size:11px" id="cf-date-from" onchange="applyClientFilters()"/></div>
-          <div><div style="font-size:10px;font-weight:700;color:var(--text3);text-transform:uppercase;letter-spacing:.07em;margin-bottom:4px">Date to</div><input type="date" class="url-input" style="height:32px;font-size:11px" id="cf-date-to" onchange="applyClientFilters()"/></div>
-          <div><div style="font-size:10px;font-weight:700;color:var(--text3);text-transform:uppercase;letter-spacing:.07em;margin-bottom:4px">Entity match</div>
+          <div style="flex:0 0 130px"><div style="font-size:10px;font-weight:700;color:var(--text3);text-transform:uppercase;letter-spacing:.07em;margin-bottom:4px">Date from</div><input type="date" class="url-input" style="height:32px;font-size:11px" id="cf-date-from" onchange="applyClientFilters()"/></div>
+          <div style="flex:0 0 130px"><div style="font-size:10px;font-weight:700;color:var(--text3);text-transform:uppercase;letter-spacing:.07em;margin-bottom:4px">Date to</div><input type="date" class="url-input" style="height:32px;font-size:11px" id="cf-date-to" onchange="applyClientFilters()"/></div>
+          <div style="flex:1;min-width:140px;max-width:180px"><div style="font-size:10px;font-weight:700;color:var(--text3);text-transform:uppercase;letter-spacing:.07em;margin-bottom:4px">Entity match</div>
             <div style="position:relative">
               <input type="text" class="url-input" style="height:32px;font-size:11px;width:100%" id="cf-entity" placeholder="type to filter..." oninput="filterClientEntityOptions()" onfocus="filterClientEntityOptions()" autocomplete="off"/>
               <div id="cf-entity-dropdown" style="display:none;position:absolute;top:34px;left:0;right:0;background:var(--surface);border:1px solid var(--border);border-radius:var(--radius-sm);z-index:50;max-height:180px;overflow-y:auto;box-shadow:0 4px 12px rgba(0,0,0,.08)"></div>
             </div>
           </div>
-          <div><div style="font-size:10px;font-weight:700;color:var(--text3);text-transform:uppercase;letter-spacing:.07em;margin-bottom:4px">Actor</div><input type="text" class="url-input" style="height:32px;font-size:11px" id="cf-actor" placeholder="@handle" oninput="applyClientFilters()"/></div>
+          <div style="flex:1;min-width:120px;max-width:160px"><div style="font-size:10px;font-weight:700;color:var(--text3);text-transform:uppercase;letter-spacing:.07em;margin-bottom:4px">Actor</div>
+            <select class="url-input" style="height:32px;font-size:11px;padding:0 8px;width:100%" id="cf-actor" onchange="applyClientFilters()">
+              <option value="">All</option>
+            </select>
+          </div>
         </div>
         <div style="display:flex;align-items:center;gap:10px">
           <button class="btn-primary btn-sm" style="background:none;color:var(--text3);border:1.5px solid var(--border);font-size:11px" onclick="clearClientFilters()">Clear</button>
@@ -768,7 +772,7 @@ const ENTITY_RELATIONS = {
 // ─────────────────────────────────────────────
 // CONFIG
 // ─────────────────────────────────────────────
-const CLIENT_VERSION = '1.15.2';
+const CLIENT_VERSION = '1.15.3';
 const SERVER_URL = 'https://whos-behind-that-server-dev.onrender.com';
 const DAILY_LIMIT = 10;
 const CONTACT_EMAIL = 'contact@whosbehindthat.com'; // replace with real email
@@ -1397,6 +1401,12 @@ async function saveToHistory(url, postText, result, srvVer) {
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(Object.assign({}, entry, { id: scanId }))
   }).catch(function(e){ console.warn('Server history save failed:', e.message); });
+  // Reset entity dropdown so new entities appear immediately
+  const dd = document.getElementById('cf-entity-dropdown');
+  if (dd) dd.dataset.built = '';
+  // Reset source dropdown so new news domains appear immediately
+  const ssel = document.getElementById('cf-platform');
+  if (ssel) { const cur = ssel.value; ssel.innerHTML = '<option value="">All</option><option value="x">X</option><option value="instagram">Instagram</option><option value="facebook">Facebook</option>'; if (cur) ssel.value = cur; }
   return entry;
 }
 
@@ -1577,7 +1587,7 @@ function applyClientFilters() {
   const entity = (document.getElementById('cf-entity')||{value:''}).value.trim().toLowerCase();
   const actor = (document.getElementById('cf-actor')||{value:''}).value.trim().toLowerCase().replace(/^@/,'');
 
-  // Populate source dropdown with social platforms + unique news domains from history
+  // Populate source dropdown
   const ssel = document.getElementById('cf-platform');
   if (ssel) {
     const curVal = ssel.value;
@@ -1591,6 +1601,20 @@ function applyClientFilters() {
     const newsOpts = Object.keys(newsDomains).sort().map(function(d){ return '<option value="news:'+d+'">'+escHtml(newsDomains[d])+'</option>'; }).join('');
     ssel.innerHTML = staticOpts + (newsOpts ? '<optgroup label="News sites">' + newsOpts + '</optgroup>' : '');
     if (curVal) ssel.value = curVal;
+  }
+
+  // Populate actor dropdown from researched actors
+  const actorSel = document.getElementById('cf-actor');
+  if (actorSel && actorSel.options.length <= 1) {
+    const actors = getActors();
+    Object.keys(actors).sort().forEach(function(k) {
+      const a = actors[k];
+      const label = (a.handle || a.name || k).slice(0, 40);
+      const opt = document.createElement('option');
+      opt.value = k.toLowerCase();
+      opt.textContent = label;
+      actorSel.appendChild(opt);
+    });
   }
 
   const actors = getActors();
@@ -1612,7 +1636,10 @@ function applyClientFilters() {
       const inFull = e.fullResult && (e.fullResult.matches||[]).some(function(m){ return (m.name||'').toLowerCase().startsWith(entity); });
       if (!inTop && !inFull) return false;
     }
-    if (actor) { const actorKey2 = Object.keys(actors).find(function(k){ return k.includes(actor) || (actors[k].handle||'').toLowerCase().replace(/^@/,'').includes(actor); }); if (!actorKey2) return false; }
+    if (actor) {
+      const actorKey2 = Object.keys(getActors()).find(function(k){ return k.toLowerCase() === actor || k.toLowerCase().includes(actor); });
+      if (!actorKey2) return false;
+    }
     return true;
   });
   const countEl = document.getElementById('cf-count');
@@ -1650,9 +1677,11 @@ function selectClientEntity(name) {
 }
 
 function clearClientFilters() {
-  ['cf-scan-id','cf-url','cf-date-from','cf-date-to','cf-entity','cf-actor'].forEach(function(id){ const el=document.getElementById(id); if(el) el.value=''; });
+  ['cf-scan-id','cf-url','cf-date-from','cf-date-to'].forEach(function(id){ const el=document.getElementById(id); if(el) el.value=''; });
   const ssel = document.getElementById('cf-platform'); if (ssel) ssel.value = '';
+  const asel = document.getElementById('cf-actor'); if (asel) { asel.value = ''; asel.innerHTML = '<option value="">All</option>'; }
   const dd = document.getElementById('cf-entity-dropdown'); if (dd) { dd.style.display='none'; dd.dataset.built=''; }
+  const inp = document.getElementById('cf-entity'); if (inp) inp.value = '';
   applyClientFilters();
 }
 function renderClientHistoryList(entries) {
@@ -1820,7 +1849,7 @@ function generateClientClusterId(srvVer) {
   const sv = (srvVer||'?').replace(/\./g,'');
   return 'WBT-CLU-' + date + '-' + av + '-' + sv + '-' + random;
 }
-async function saveClientCluster(synthesis, postIds, isolatedPostIds, srvVer, preGeneratedId) {
+async function saveClientCluster(synthesis, postIds, isolatedPostIds, connections, srvVer, preGeneratedId) {
   const clusterId = preGeneratedId || generateClientClusterId(srvVer);
   try {
     await fetch(SERVER_URL + '/clusters/save', {
@@ -1831,8 +1860,9 @@ async function saveClientCluster(synthesis, postIds, isolatedPostIds, srvVer, pr
         frame: synthesis.frame||'', event: synthesis.event||'',
         postIds: postIds||[], isolatedPostIds: isolatedPostIds||[],
         postSummaries: synthesis.postSummaries||[],
-        postCount: (postIds||[]).length,
-        source: 'client', appVersion: CLIENT_VERSION, serverVersion: srvVer
+        connections: connections||[],
+        postCount: (postIds||[]).length + (isolatedPostIds||[]).length,
+        source: 'client', deviceId: getDeviceId(), appVersion: CLIENT_VERSION, serverVersion: srvVer
       })
     });
     return clusterId;
@@ -1984,10 +2014,10 @@ async function renameClientCluster(clusterId, suffix) {
 }
 
 const CLIENT_CLUSTER_COLORS = [
-  { bg:'#eff6ff', border:'#1a6bff', text:'#1a6bff' },
-  { bg:'#e1f5ee', border:'#0f6e56', text:'#0f6e56' },
-  { bg:'#faeeda', border:'#ba7517', text:'#ba7517' },
-  { bg:'#fbeaf0', border:'#993556', text:'#993556' },
+  { bg:'#eff6ff', border:'#1a6bff', text:'#1a6bff', label:'A' },
+  { bg:'#e1f5ee', border:'#0f6e56', text:'#0f6e56', label:'B' },
+  { bg:'#faeeda', border:'#ba7517', text:'#ba7517', label:'C' },
+  { bg:'#fbeaf0', border:'#993556', text:'#993556', label:'D' },
 ];
 // ─── CLIENT TIMELINE + LEGEND (mirrors admin) ───
 function renderClientTimeline(basket, clusters, isolated, postClusterMap, connections) {
@@ -2280,7 +2310,7 @@ async function runClientInvestigation() {
       card.insertBefore(idDiv, card.firstChild);
     });
     await Promise.allSettled(results.map(function(s, i) {
-      return saveClientCluster(s, clusters[i], isolated, srvVerMatch, clientClusterIds[i]);
+      return saveClientCluster(s, clusters[i], isolated, connections, srvVerMatch, clientClusterIds[i]);
     }));
     // Clear basket after successful investigation
     saveClientBasket([]);
