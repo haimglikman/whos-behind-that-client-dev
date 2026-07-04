@@ -1,3 +1,10 @@
+### v1.15.4 — bug fix (client-dev) | Server: v1.19.2 | Admin: v2.13.8
+- Clusters history: connection lines now restored when reopening a cluster — was passing [] instead of c.connections
+- Clusters history: omitted posts now show their one-liner summary in hover popup, same as included posts
+- Clusters history: cluster ID shown prominently at top above timeline, as a link
+- Clusters history: URL updates to cluster ID on open (e.g. #WBT-CLU-...) — direct linking supported
+- Clusters history: frame and event shown as prominent labeled cards, not tiny bottom text
+
 ### v1.15.3 — bug fix (client-dev) | Server: v1.19.2 | Admin: v2.13.8
 - Post history: filter fields now use flex layout with consistent widths — no more uneven gaps
 - Post history: actor filter is now a dropdown populated from researched actors
