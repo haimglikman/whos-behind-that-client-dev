@@ -480,24 +480,25 @@ body{background:var(--bg);display:flex;flex-direction:column;min-height:100vh}
 
       <!-- History filters -->
       <div style="background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:12px 14px;margin-bottom:10px">
-        <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:8px;margin-bottom:8px">
+        <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(140px,1fr));gap:8px;margin-bottom:8px">
           <div><div style="font-size:10px;font-weight:700;color:var(--text3);text-transform:uppercase;letter-spacing:.07em;margin-bottom:4px">Search by ID</div><input type="text" class="url-input" style="height:32px;font-size:11px" id="cf-scan-id" placeholder="WBT-..." oninput="applyClientFilters()"/></div>
           <div><div style="font-size:10px;font-weight:700;color:var(--text3);text-transform:uppercase;letter-spacing:.07em;margin-bottom:4px">URL</div><input type="text" class="url-input" style="height:32px;font-size:11px" id="cf-url" placeholder="x.com/..." oninput="applyClientFilters()"/></div>
-          <div><div style="font-size:10px;font-weight:700;color:var(--text3);text-transform:uppercase;letter-spacing:.07em;margin-bottom:4px">Platform</div>
+          <div><div style="font-size:10px;font-weight:700;color:var(--text3);text-transform:uppercase;letter-spacing:.07em;margin-bottom:4px">Source</div>
             <select class="url-input" style="height:32px;font-size:11px;padding:0 8px" id="cf-platform" onchange="applyClientFilters()">
               <option value="">All</option>
               <option value="x">X</option>
               <option value="instagram">Instagram</option>
               <option value="facebook">Facebook</option>
-              <option value="news">News</option>
             </select>
-          </div>
-          <div><div style="font-size:10px;font-weight:700;color:var(--text3);text-transform:uppercase;letter-spacing:.07em;margin-bottom:4px">News site</div>
-            <select class="url-input" style="height:32px;font-size:11px;padding:0 8px" id="cf-newssite" onchange="applyClientFilters()"><option value="">All sites</option></select>
           </div>
           <div><div style="font-size:10px;font-weight:700;color:var(--text3);text-transform:uppercase;letter-spacing:.07em;margin-bottom:4px">Date from</div><input type="date" class="url-input" style="height:32px;font-size:11px" id="cf-date-from" onchange="applyClientFilters()"/></div>
           <div><div style="font-size:10px;font-weight:700;color:var(--text3);text-transform:uppercase;letter-spacing:.07em;margin-bottom:4px">Date to</div><input type="date" class="url-input" style="height:32px;font-size:11px" id="cf-date-to" onchange="applyClientFilters()"/></div>
-          <div><div style="font-size:10px;font-weight:700;color:var(--text3);text-transform:uppercase;letter-spacing:.07em;margin-bottom:4px">Entity match</div><input type="text" class="url-input" style="height:32px;font-size:11px" id="cf-entity" placeholder="e.g. Hamas" oninput="applyClientFilters()"/></div>
+          <div><div style="font-size:10px;font-weight:700;color:var(--text3);text-transform:uppercase;letter-spacing:.07em;margin-bottom:4px">Entity match</div>
+            <div style="position:relative">
+              <input type="text" class="url-input" style="height:32px;font-size:11px;width:100%" id="cf-entity" placeholder="type to filter..." oninput="filterClientEntityOptions()" onfocus="filterClientEntityOptions()" autocomplete="off"/>
+              <div id="cf-entity-dropdown" style="display:none;position:absolute;top:34px;left:0;right:0;background:var(--surface);border:1px solid var(--border);border-radius:var(--radius-sm);z-index:50;max-height:180px;overflow-y:auto;box-shadow:0 4px 12px rgba(0,0,0,.08)"></div>
+            </div>
+          </div>
           <div><div style="font-size:10px;font-weight:700;color:var(--text3);text-transform:uppercase;letter-spacing:.07em;margin-bottom:4px">Actor</div><input type="text" class="url-input" style="height:32px;font-size:11px" id="cf-actor" placeholder="@handle" oninput="applyClientFilters()"/></div>
         </div>
         <div style="display:flex;align-items:center;gap:10px">
@@ -767,7 +768,7 @@ const ENTITY_RELATIONS = {
 // ─────────────────────────────────────────────
 // CONFIG
 // ─────────────────────────────────────────────
-const CLIENT_VERSION = '1.15.1';
+const CLIENT_VERSION = '1.15.2';
 const SERVER_URL = 'https://whos-behind-that-server-dev.onrender.com';
 const DAILY_LIMIT = 10;
 const CONTACT_EMAIL = 'contact@whosbehindthat.com'; // replace with real email
@@ -1570,36 +1571,47 @@ function applyClientFilters() {
   const h = getHistory();
   const scanId = (document.getElementById('cf-scan-id')||{value:''}).value.trim().toLowerCase();
   const urlF = (document.getElementById('cf-url')||{value:''}).value.trim().toLowerCase();
-  const platform = (document.getElementById('cf-platform')||{value:''}).value;
-  const newssite = (document.getElementById('cf-newssite')||{value:''}).value;
+  const source = (document.getElementById('cf-platform')||{value:''}).value;
   const dateFrom = (document.getElementById('cf-date-from')||{value:''}).value;
   const dateTo = (document.getElementById('cf-date-to')||{value:''}).value;
   const entity = (document.getElementById('cf-entity')||{value:''}).value.trim().toLowerCase();
   const actor = (document.getElementById('cf-actor')||{value:''}).value.trim().toLowerCase().replace(/^@/,'');
 
-  // Populate news site dropdown
-  const nsel = document.getElementById('cf-newssite');
-  if (nsel && nsel.options.length <= 1) {
-    const sites = {};
+  // Populate source dropdown with social platforms + unique news domains from history
+  const ssel = document.getElementById('cf-platform');
+  if (ssel) {
+    const curVal = ssel.value;
+    const newsDomains = {};
     h.forEach(function(e) {
       if (e.platform === 'news' && e.url) {
-        try { const domain = new URL(e.url).hostname.replace(/^www\./,''); sites[domain] = getDomainDisplayName(e.url); } catch(err) {}
+        try { const d = new URL(e.url).hostname.replace(/^www\./,''); newsDomains[d] = getDomainDisplayName(e.url); } catch(err) {}
       }
     });
-    Object.keys(sites).sort().forEach(function(domain) {
-      const opt = document.createElement('option'); opt.value = domain; opt.textContent = sites[domain]; nsel.appendChild(opt);
-    });
+    const staticOpts = '<option value="">All</option><option value="x">X</option><option value="instagram">Instagram</option><option value="facebook">Facebook</option>';
+    const newsOpts = Object.keys(newsDomains).sort().map(function(d){ return '<option value="news:'+d+'">'+escHtml(newsDomains[d])+'</option>'; }).join('');
+    ssel.innerHTML = staticOpts + (newsOpts ? '<optgroup label="News sites">' + newsOpts + '</optgroup>' : '');
+    if (curVal) ssel.value = curVal;
   }
 
   const actors = getActors();
   const filtered = h.filter(function(e) {
     if (scanId && !(e.scanId||'').toLowerCase().includes(scanId)) return false;
     if (urlF && !(e.url||'').toLowerCase().includes(urlF)) return false;
-    if (platform && (e.platform||'unknown') !== platform) return false;
-    if (newssite) { try { const d = new URL(e.url||'').hostname.replace(/^www\./,''); if (d !== newssite) return false; } catch(err) { return false; } }
+    if (source) {
+      if (source.startsWith('news:')) {
+        const domain = source.slice(5);
+        try { const d = new URL(e.url||'').hostname.replace(/^www\./,''); if (d !== domain) return false; } catch(err) { return false; }
+      } else {
+        if ((e.platform||'unknown') !== source) return false;
+      }
+    }
     if (dateFrom && new Date(e.ts) < new Date(dateFrom)) return false;
     if (dateTo && new Date(e.ts) > new Date(dateTo + 'T23:59:59')) return false;
-    if (entity) { const inTop = (e.topMatches||[]).some(function(m){ return m.toLowerCase().includes(entity); }); const inFull = e.fullResult && (e.fullResult.matches||[]).some(function(m){ return (m.name||'').toLowerCase().includes(entity); }); if (!inTop && !inFull) return false; }
+    if (entity) {
+      const inTop = (e.topMatches||[]).some(function(m){ return m.toLowerCase().startsWith(entity); });
+      const inFull = e.fullResult && (e.fullResult.matches||[]).some(function(m){ return (m.name||'').toLowerCase().startsWith(entity); });
+      if (!inTop && !inFull) return false;
+    }
     if (actor) { const actorKey2 = Object.keys(actors).find(function(k){ return k.includes(actor) || (actors[k].handle||'').toLowerCase().replace(/^@/,'').includes(actor); }); if (!actorKey2) return false; }
     return true;
   });
@@ -1607,9 +1619,40 @@ function applyClientFilters() {
   if (countEl) countEl.textContent = filtered.length + ' of ' + h.length;
   renderClientHistoryList(filtered);
 }
+
+function filterClientEntityOptions() {
+  const input = document.getElementById('cf-entity');
+  const dropdown = document.getElementById('cf-entity-dropdown');
+  if (!input || !dropdown) return;
+  const q = input.value.trim().toLowerCase();
+  // Build entity list from history on first call or when empty
+  if (!dropdown.dataset.built) {
+    const h = getHistory();
+    const entities = [...new Set(h.flatMap(function(e){ return e.topMatches||[]; }))].sort();
+    dropdown.innerHTML = entities.map(function(e){
+      return '<div class="entity-option" data-name="' + escHtml(e) + '" style="padding:6px 10px;font-size:12px;cursor:pointer;color:var(--text)" onclick="selectClientEntity(\'' + escHtml(e).replace(/'/g,"&#39;") + '\')" onmouseover="this.style.background=\'var(--bg)\'" onmouseout="this.style.background=\'\'">' + escHtml(e) + '</div>';
+    }).join('');
+    dropdown.dataset.built = '1';
+  }
+  dropdown.querySelectorAll('.entity-option').forEach(function(opt){
+    opt.style.display = (!q || opt.dataset.name.toLowerCase().startsWith(q)) ? '' : 'none';
+  });
+  dropdown.style.display = 'block';
+  applyClientFilters();
+}
+
+function selectClientEntity(name) {
+  const input = document.getElementById('cf-entity');
+  const dropdown = document.getElementById('cf-entity-dropdown');
+  if (input) input.value = name;
+  if (dropdown) dropdown.style.display = 'none';
+  applyClientFilters();
+}
+
 function clearClientFilters() {
   ['cf-scan-id','cf-url','cf-date-from','cf-date-to','cf-entity','cf-actor'].forEach(function(id){ const el=document.getElementById(id); if(el) el.value=''; });
-  ['cf-platform','cf-newssite'].forEach(function(id){ const el=document.getElementById(id); if(el) el.value=''; });
+  const ssel = document.getElementById('cf-platform'); if (ssel) ssel.value = '';
+  const dd = document.getElementById('cf-entity-dropdown'); if (dd) { dd.style.display='none'; dd.dataset.built=''; }
   applyClientFilters();
 }
 function renderClientHistoryList(entries) {
@@ -1797,7 +1840,8 @@ async function saveClientCluster(synthesis, postIds, isolatedPostIds, srvVer, pr
 }
 async function loadClientClusters() {
   try {
-    const res = await fetch(SERVER_URL + '/clusters/list');
+    const deviceId = getDeviceId();
+    const res = await fetch(SERVER_URL + '/clusters/list?device_id=' + encodeURIComponent(deviceId));
     if (!res.ok) return [];
     const data = await res.json();
     return data.clusters || [];
@@ -1823,8 +1867,8 @@ async function renderClientFaq() {
     Object.keys(groups).forEach(function(g) {
       html += '<div class="faq-group"><div class="faq-group-label">' + escHtml(g) + '</div>';
       groups[g].forEach(function(f) {
-        html += '<div class="faq-item"><div class="faq-q" onclick="toggleFaq(this)"><span>' + escHtml(f.question) + '</span><svg class="faq-chevron" viewBox="0 0 12 12"><path d="M2 4l4 4 4-4" stroke="currentColor" stroke-width="1.5" fill="none" stroke-linecap="round"/></svg></div>';
-        html += '<div class="faq-a">' + escHtml(f.answer) + '</div></div>';
+        html += '<div class="faq-item"><div class="faq-q" onclick="toggleFaq(this)"><span>' + escHtml(f.question) + '</span><svg class="faq-chevron" width="12" height="12" viewBox="0 0 12 12" fill="none"><path d="M2 4l4 4 4-4" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg></div>';
+        html += '<div class="faq-a">' + escHtml(f.answer).replace(/\n/g,'<br>') + '</div></div>';
       });
       html += '</div>';
     });
@@ -2288,6 +2332,14 @@ window.addEventListener('DOMContentLoaded', function() {
   }
   history.replaceState({ page: initPage }, '', '#' + initPage);
   startWarmup();
+  // Close entity dropdown on outside click
+  document.addEventListener('click', function(e) {
+    const dd = document.getElementById('cf-entity-dropdown');
+    const input = document.getElementById('cf-entity');
+    if (dd && input && !dd.contains(e.target) && e.target !== input) {
+      dd.style.display = 'none';
+    }
+  });
 });
 
 async function startWarmup() {
