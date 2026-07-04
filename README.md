@@ -1,3 +1,10 @@
+### v1.15.3 — bug fix (client-dev) | Server: v1.19.2 | Admin: v2.13.8
+- Post history: filter fields now use flex layout with consistent widths — no more uneven gaps
+- Post history: actor filter is now a dropdown populated from researched actors
+- Post history: new entity alignments and news sources now appear in dropdowns immediately after scanning, without needing a page reload
+- Timeline: fixed "CLUSTER undefined" — CLIENT_CLUSTER_COLORS was missing label property (A/B/C/D)
+- Clusters history: fixed clusters not appearing — saveClientCluster now passes deviceId and connections to server
+
 ### v1.15.2 — bug fix (client-dev) | Server: v1.19.2 | Admin: v2.13.8
 - Post history: fixed uneven grid gaps — switched to auto-fill layout
 - Post history: removed separate "News site" filter — merged into "Source" dropdown which auto-populates with news domains found in history (e.g. Ynet appears after first Ynet scan)
