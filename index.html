@@ -772,7 +772,7 @@ const ENTITY_RELATIONS = {
 // ─────────────────────────────────────────────
 // CONFIG
 // ─────────────────────────────────────────────
-const CLIENT_VERSION = '1.15.6';
+const CLIENT_VERSION = '1.15.8';
 const SERVER_URL = 'https://whos-behind-that-server-dev.onrender.com';
 const DAILY_LIMIT = 10;
 const CONTACT_EMAIL = 'contact@whosbehindthat.com'; // replace with real email
@@ -1990,8 +1990,8 @@ function openClientClusterFromHistory(idx) {
   html += '</div>';
 
   // Timeline + Legend
-  html += renderClientTimeline(posts, [c.postIds||[]], isolated, postClusterMap, connections);
-  html += renderClientLegend(posts, [c.postIds||[]], isolated, postClusterMap);
+  html += renderClientTimeline(posts, [c.postIds||[]], isolated, postClusterMap, connections, true);
+  html += renderClientLegend(posts, [c.postIds||[]], isolated, postClusterMap, true);
 
   // Synopsis card
   html += '<div class="card" style="margin-bottom:10px">';
@@ -2051,11 +2051,9 @@ const CLIENT_CLUSTER_COLORS = [
   { bg:'#fbeaf0', border:'#993556', text:'#993556', label:'D' },
 ];
 // ─── CLIENT TIMELINE + LEGEND (mirrors admin) ───
-function renderClientTimeline(basket, clusters, isolated, postClusterMap, connections) {
+function renderClientTimeline(basket, clusters, isolated, postClusterMap, connections, presorted) {
   if (!basket || basket.length === 0) return '';
-  const original = basket.slice(); // P-number order preserved
-  const sorted = basket.slice().sort(function(a,b){ return new Date(a.ts||0) - new Date(b.ts||0); });
-  function pNum(scanId) { const i = original.findIndex(function(p){ return p.scanId===scanId; }); return i >= 0 ? i+1 : '?'; }
+  const sorted = presorted ? basket.slice() : basket.slice().sort(function(a,b){ return new Date(a.ts||0) - new Date(b.ts||0); });
 
   const NO_ENTITY = 'No detected entity';
   const entityOrder = [];
@@ -2184,7 +2182,7 @@ function renderClientTimeline(basket, clusters, isolated, postClusterMap, connec
     const x=xOf(p), y=yOf(p.scanId);
     const cis=postClusterMap[p.scanId]||[];
     const isIso=cis.length===0, isMulti=cis.length>1;
-    const num=pNum(p.scanId);
+    const num=pidx+1;
 
     if (isMulti) {
       const c0=CLIENT_CLUSTER_COLORS[cis[0]%CLIENT_CLUSTER_COLORS.length], c1=CLIENT_CLUSTER_COLORS[cis[1]%CLIENT_CLUSTER_COLORS.length];
@@ -2208,10 +2206,8 @@ function renderClientTimeline(basket, clusters, isolated, postClusterMap, connec
   out += svg + '</div>';
   return out;
 }
-function renderClientLegend(basket, clusters, isolated, postClusterMap) {
-  const original = basket.slice();
-  const sorted = basket.slice().sort(function(a,b){ return new Date(a.ts||0) - new Date(b.ts||0); });
-  function pNum(scanId) { const i = original.findIndex(function(p){ return p.scanId===scanId; }); return i >= 0 ? i+1 : '?'; }
+function renderClientLegend(basket, clusters, isolated, postClusterMap, presorted) {
+  const sorted = presorted ? basket.slice() : basket.slice().sort(function(a,b){ return new Date(a.ts||0) - new Date(b.ts||0); });
   const includedIds = clusters.flat();
   let html = '<div class="card" style="padding:10px 14px;margin-bottom:10px">';
   html += '<div style="font-size:10px;font-weight:700;color:var(--text3);text-transform:uppercase;letter-spacing:.1em;margin-bottom:8px">Legend</div>';
@@ -2220,7 +2216,7 @@ function renderClientLegend(basket, clusters, isolated, postClusterMap) {
     html += '<div style="font-size:10px;font-weight:700;color:var(--text3);margin-bottom:5px;text-transform:uppercase;letter-spacing:.06em">Included</div>';
     sorted.filter(function(p){ return includedIds.includes(p.scanId); }).forEach(function(p) {
       const cis = postClusterMap[p.scanId] || [];
-      const idx = pNum(p.scanId);
+      const idx = sorted.indexOf(p) + 1;
       const color = cis.length > 0 ? CLIENT_CLUSTER_COLORS[cis[0] % CLIENT_CLUSTER_COLORS.length] : CLIENT_CLUSTER_COLORS[0];
       const d = p.ts ? new Date(p.ts) : null;
       const secondary = (p.topMatches||[])[1] || '';
@@ -2241,7 +2237,7 @@ function renderClientLegend(basket, clusters, isolated, postClusterMap) {
   if (isolated.length > 0) {
     html += '<div style="font-size:10px;font-weight:700;color:var(--text3);margin-top:10px;margin-bottom:5px;text-transform:uppercase;letter-spacing:.06em">Omitted</div>';
     sorted.filter(function(p){ return isolated.includes(p.scanId); }).forEach(function(p) {
-      const idx = pNum(p.scanId);
+      const idx = sorted.indexOf(p) + 1;
       html += '<div style="display:flex;align-items:center;gap:8px;padding:6px 0;border-top:1px solid var(--border);font-size:11px;flex-wrap:wrap">';
       html += '<span style="display:inline-flex;align-items:center;justify-content:center;width:20px;height:20px;border-radius:50%;background:#f1efe8;border:1px solid #b4b2a9;font-size:9px;font-weight:700;color:#888780;flex-shrink:0">P' + idx + '</span>';
       html += '<span style="color:var(--text3)">' + escHtml((p.topMatches||[])[0] || p.overallLabel || '') + '</span>';
