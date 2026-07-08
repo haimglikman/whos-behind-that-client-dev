@@ -1,3 +1,6 @@
+### v1.15.6 — bug fix (client-dev) | Server: v1.19.3 | Admin: v2.13.11
+- Same P-number fix — timeline and legend now assign P-numbers from the original postIds order
+
 ### v1.15.5 (client-dev) | Server: v1.19.3 | Admin: v2.13.10
 - Clusters history: uses saved posts data for reconstruction — consistent P-numbers and entity data even for older clusters
 - Investigate: cluster ID now shown at top above timeline in live results (not injected after render)
