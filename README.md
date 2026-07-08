@@ -1,3 +1,9 @@
+### v1.15.5 (client-dev) | Server: v1.19.3 | Admin: v2.13.10
+- Clusters history: uses saved posts data for reconstruction — consistent P-numbers and entity data even for older clusters
+- Investigate: cluster ID now shown at top above timeline in live results (not injected after render)
+- Investigate: frame and event shown as prominent labeled cards in live results
+- Tab title changed to "WBT - Client DEV"
+
 ### v1.15.4 — bug fix (client-dev) | Server: v1.19.2 | Admin: v2.13.8
 - Clusters history: connection lines now restored when reopening a cluster — was passing [] instead of c.connections
 - Clusters history: omitted posts now show their one-liner summary in hover popup, same as included posts
