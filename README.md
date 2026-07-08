@@ -1,3 +1,8 @@
+### v1.15.8 (client-dev) | Server: v1.19.3 | Admin: v2.13.13
+- Same fix — timeline and legend preserve postIds order when reopening clusters from history
+
+### v1.15.7 — DISCARDED (duplicate of v1.15.5)
+
 ### v1.15.6 — bug fix (client-dev) | Server: v1.19.3 | Admin: v2.13.11
 - Same P-number fix — timeline and legend now assign P-numbers from the original postIds order
 
