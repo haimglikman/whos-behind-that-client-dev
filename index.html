@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Who's Behind That? — Client</title>
+<title>WBT - Client DEV</title>
   <meta name="description" content="AI-powered narrative intelligence tool. Uncover the hidden interests behind social media posts and news articles.">
   <meta property="og:title" content="Who's Behind That?">
   <meta property="og:description" content="AI-powered narrative intelligence tool. Uncover the hidden interests behind social media posts and news articles.">
@@ -772,7 +772,7 @@ const ENTITY_RELATIONS = {
 // ─────────────────────────────────────────────
 // CONFIG
 // ─────────────────────────────────────────────
-const CLIENT_VERSION = '1.15.4';
+const CLIENT_VERSION = '1.15.5';
 const SERVER_URL = 'https://whos-behind-that-server-dev.onrender.com';
 const DAILY_LIMIT = 10;
 const CONTACT_EMAIL = 'contact@whosbehindthat.com'; // replace with real email
@@ -1851,6 +1851,13 @@ function generateClientClusterId(srvVer) {
 }
 async function saveClientCluster(synthesis, postIds, isolatedPostIds, connections, srvVer, preGeneratedId) {
   const clusterId = preGeneratedId || generateClientClusterId(srvVer);
+  // Build posts array for cross-device reconstruction
+  const h = getHistory();
+  const allIds = (postIds||[]).concat(isolatedPostIds||[]);
+  const postsArr = allIds.map(function(scanId) {
+    const p = h.find(function(e){ return e.scanId === scanId; }) || {};
+    return { scanId, url: p.url||'', topMatches: p.topMatches||[], overallScore: p.overallScore||0, ts: p.ts||'' };
+  });
   try {
     await fetch(SERVER_URL + '/clusters/save', {
       method:'POST', headers:{'Content-Type':'application/json'},
@@ -1861,6 +1868,7 @@ async function saveClientCluster(synthesis, postIds, isolatedPostIds, connection
         postIds: postIds||[], isolatedPostIds: isolatedPostIds||[],
         postSummaries: synthesis.postSummaries||[],
         connections: connections||[],
+        posts: postsArr,
         postCount: (postIds||[]).length + (isolatedPostIds||[]).length,
         source: 'client', deviceId: getDeviceId(), appVersion: CLIENT_VERSION, serverVersion: srvVer
       })
@@ -1953,18 +1961,21 @@ function openClientClusterFromHistory(idx) {
   const summaries = c.postSummaries || [];
   const isolated = c.isolatedPostIds || [];
   const connections = c.connections || [];
+  const savedPosts = c.posts || [];
 
-  // Reconstruct all posts (connected + isolated) from local history
+  // Reconstruct posts — prefer local history, fall back to saved posts data
   const h = getHistory();
   const allPostIds = (c.postIds||[]).concat(isolated);
-  const posts = allPostIds.map(function(scanId) {
+  const anchorTs = c.ts ? new Date(c.ts).getTime() : Date.now();
+  const posts = allPostIds.map(function(scanId, i) {
     const found = h.find(function(e){ return e.scanId === scanId; });
-    const isConnected = (c.postIds||[]).includes(scanId);
+    const saved = savedPosts.find(function(p){ return p.scanId === scanId; });
     const sumIdx = (c.postIds||[]).indexOf(scanId);
-    // #2: attach summary to ALL posts including isolated
-    return Object.assign({}, found || { scanId: scanId, url: scanId, postText: '', topMatches: [], overallScore: 0 }, {
-      _summary: sumIdx >= 0 ? summaries[sumIdx] || '' : ''
-    });
+    const summary = sumIdx >= 0 ? summaries[sumIdx] || '' : '';
+    if (found) return Object.assign({}, found, { _summary: summary });
+    if (saved) return Object.assign({}, saved, { _summary: summary, _missing: true });
+    return { scanId, url: '', postText: '', topMatches: [], overallScore: 0,
+      ts: new Date(anchorTs + i * 86400000).toISOString(), _summary: summary, _missing: true };
   });
   const postClusterMap = {};
   (c.postIds||[]).forEach(function(id){ postClusterMap[id] = [0]; });
@@ -2274,19 +2285,40 @@ async function runClientInvestigation() {
     clusters.forEach(function(cluster, ci){ cluster.forEach(function(id){ if (!postClusterMap[id]) postClusterMap[id] = []; postClusterMap[id].push(ci); }); });
     const enrichedBasket = basket.map(function(p){ return postMap[p.scanId] || p; });
     let html = '';
-    // Timeline + Legend (same as admin)
+    const srvVerMatch = document.getElementById('srv-ver-label') ? document.getElementById('srv-ver-label').textContent.replace('srv v','') : '?';
+    const clientClusterIds = results.map(function(){ return generateClientClusterId(srvVerMatch); });
+
+    // Timeline + Legend
     html += renderClientTimeline(enrichedBasket, clusters, isolated, postClusterMap, connections);
     html += renderClientLegend(enrichedBasket, clusters, isolated, postClusterMap);
-    // Synopsis cards
+
+    // Synopsis cards — cluster ID at top, frame/event prominent
     results.forEach(function(s, i) {
+      const cid = clientClusterIds[i] || '';
       const color = CLIENT_CLUSTER_COLORS[i % CLIENT_CLUSTER_COLORS.length];
       html += '<div class="card" style="margin-bottom:10px">';
-      html += '<div style="display:flex;align-items:center;gap:8px;margin-bottom:8px"><span style="background:' + color.bg + ';color:' + color.text + ';border:1px solid ' + color.border + ';border-radius:99px;padding:2px 10px;font-size:10px;font-weight:700">' + escHtml(s.clusterName || 'Cluster ' + (i+1)) + '</span>';
-      if (s.connectionType) html += '<span style="font-size:10px;color:var(--text3);margin-left:auto;font-style:italic">' + escHtml(s.connectionType) + '</span>';
-      html += '</div>';
+      // Cluster ID at top
+      if (cid) {
+        html += '<div style="display:flex;align-items:center;gap:8px;margin-bottom:10px;flex-wrap:wrap">';
+        html += '<span style="font-family:var(--mono);font-size:11px;font-weight:700;color:var(--blue);background:var(--blue-dim);border:1px solid rgba(26,107,255,.2);border-radius:6px;padding:4px 12px">' + escHtml(cid) + '</span>';
+        html += '</div>';
+      }
+      // Rename field
+      html += '<div style="margin-bottom:10px"><div style="font-size:10px;font-weight:700;color:var(--text3);text-transform:uppercase;letter-spacing:.07em;margin-bottom:5px">Cluster name</div>';
+      html += '<div style="display:flex;gap:8px;align-items:center">';
+      html += '<input type="text" class="url-input" style="flex:1;font-size:12px;font-weight:600;color:var(--text);height:32px" id="client-cluster-name-' + i + '" value="' + escHtml(s.clusterName||'Cluster '+(i+1)) + '" />';
+      html += '<button style="background:var(--blue);color:#fff;border:none;border-radius:8px;padding:6px 12px;font-size:11px;font-weight:700;cursor:pointer;font-family:var(--sans);white-space:nowrap" data-cid="' + escHtml(cid) + '" data-idx="' + i + '" onclick="renameClientCluster(this.dataset.cid,this.dataset.idx)">Save</button>';
+      html += '</div></div>';
+      // Frame + Event as prominent cards
+      if (s.frame || s.event) {
+        html += '<div style="display:flex;flex-wrap:wrap;gap:8px;margin-bottom:10px">';
+        if (s.frame) html += '<div style="background:var(--bg);border:1px solid var(--border);border-radius:6px;padding:5px 10px"><div style="font-size:9px;font-weight:700;color:var(--text3);text-transform:uppercase;letter-spacing:.07em;margin-bottom:2px">Frame</div><div style="font-size:12px;color:var(--text)">' + escHtml(s.frame) + '</div></div>';
+        if (s.event) html += '<div style="background:var(--bg);border:1px solid var(--border);border-radius:6px;padding:5px 10px"><div style="font-size:9px;font-weight:700;color:var(--text3);text-transform:uppercase;letter-spacing:.07em;margin-bottom:2px">Event</div><div style="font-size:12px;color:var(--text)">' + escHtml(s.event) + '</div></div>';
+        html += '</div>';
+      }
+      if (s.connectionType) html += '<div style="font-size:10px;color:var(--text3);font-style:italic;margin-bottom:8px">' + escHtml(s.connectionType) + '</div>';
       html += '<p style="font-size:12px;line-height:1.7;color:var(--text2);margin-bottom:8px">' + escHtml(s.synopsis||'') + '</p>';
       if (s.dominantEntity) html += '<div style="font-size:11px;color:var(--text3);font-weight:600;margin-bottom:8px">Serves: <span style="color:var(--text2)">' + escHtml(s.dominantEntity) + '</span></div>';
-      // Post summaries (#3)
       if (s.postSummaries && s.postSummaries.length > 0) {
         html += '<div style="border-top:1px solid var(--border);padding-top:8px;margin-top:4px">';
         html += '<div style="font-size:10px;font-weight:700;color:var(--text3);text-transform:uppercase;letter-spacing:.07em;margin-bottom:6px">Posts</div>';
@@ -2299,36 +2331,7 @@ async function runClientInvestigation() {
       }
       html += '</div>';
     });
-    // Excluded
-    if (isolated.length > 0) {
-      html += '<div style="background:var(--bg2);border:1px dashed var(--border);border-radius:var(--radius);padding:12px 14px;margin-bottom:8px">';
-      html += '<div style="font-size:10px;font-weight:700;color:var(--text3);text-transform:uppercase;letter-spacing:.07em;margin-bottom:6px">Excluded — no connection found</div>';
-      isolated.forEach(function(scanId) {
-        const p = postMap[scanId];
-        if (!p) return;
-        html += '<div style="font-size:11px;color:var(--text3);padding:4px 0;border-top:1px solid var(--border)">' + escHtml(scanId) + ' · ' + escHtml((p.topMatches||[])[0]||'') + '</div>';
-      });
-      html += '</div>';
-    }
     resultsEl.innerHTML = html;
-    // Generate IDs upfront, save clusters, then update UI with IDs
-    const srvVerMatch = document.getElementById('srv-ver-label') ? document.getElementById('srv-ver-label').textContent.replace('srv v','') : '?';
-    const clientClusterIds = results.map(function(){ return generateClientClusterId(srvVerMatch); });
-    // Inject cluster IDs and rename fields into rendered cards
-    results.forEach(function(s, i) {
-      const cid = clientClusterIds[i];
-      const card = resultsEl.querySelectorAll('.card')[i + 2]; // offset by timeline + legend cards
-      if (!card || !cid) return;
-      const idDiv = document.createElement('div');
-      idDiv.style.cssText = 'margin-bottom:10px';
-      idDiv.innerHTML = '<div style="font-family:var(--mono);font-size:10px;font-weight:700;color:var(--blue);background:var(--blue-dim);border:1px solid rgba(26,107,255,.2);border-radius:6px;padding:3px 10px;display:inline-block;margin-bottom:8px">' + escHtml(cid) + '</div>' +
-        '<div style="font-size:10px;font-weight:700;color:var(--text3);text-transform:uppercase;letter-spacing:.07em;margin-bottom:5px">Cluster name</div>' +
-        '<div style="display:flex;gap:8px;align-items:center">' +
-        '<input type="text" class="url-input" style="flex:1;font-size:12px;font-weight:600;color:var(--text);height:32px" id="client-cluster-name-' + i + '" value="' + escHtml(s.clusterName||'Cluster '+(i+1)) + '" />' +
-        '<button style="background:var(--blue);color:#fff;border:none;border-radius:8px;padding:6px 12px;font-size:11px;font-weight:700;cursor:pointer;font-family:var(--sans);white-space:nowrap" data-cid="' + escHtml(cid) + '" data-idx="' + i + '" onclick="renameClientCluster(this.dataset.cid,this.dataset.idx)">Save</button>' +
-        '</div>';
-      card.insertBefore(idDiv, card.firstChild);
-    });
     await Promise.allSettled(results.map(function(s, i) {
       return saveClientCluster(s, clusters[i], isolated, connections, srvVerMatch, clientClusterIds[i]);
     }));
