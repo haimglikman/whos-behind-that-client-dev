@@ -772,7 +772,7 @@ const ENTITY_RELATIONS = {
 // ─────────────────────────────────────────────
 // CONFIG
 // ─────────────────────────────────────────────
-const CLIENT_VERSION = '1.15.8';
+const CLIENT_VERSION = '1.15.9';
 const SERVER_URL = 'https://whos-behind-that-server-dev.onrender.com';
 const DAILY_LIMIT = 10;
 const CONTACT_EMAIL = 'contact@whosbehindthat.com'; // replace with real email
@@ -1849,13 +1849,12 @@ function generateClientClusterId(srvVer) {
   const sv = (srvVer||'?').replace(/\./g,'');
   return 'WBT-CLU-' + date + '-' + av + '-' + sv + '-' + random;
 }
-async function saveClientCluster(synthesis, postIds, isolatedPostIds, connections, srvVer, preGeneratedId) {
+async function saveClientCluster(synthesis, postIds, isolatedPostIds, connections, srvVer, preGeneratedId, basket) {
   const clusterId = preGeneratedId || generateClientClusterId(srvVer);
-  // Build posts array for cross-device reconstruction
-  const h = getHistory();
+  // Build posts array from basket — has full data regardless of history state
   const allIds = (postIds||[]).concat(isolatedPostIds||[]);
   const postsArr = allIds.map(function(scanId) {
-    const p = h.find(function(e){ return e.scanId === scanId; }) || {};
+    const p = (basket||[]).find(function(e){ return e.scanId === scanId; }) || {};
     return { scanId, url: p.url||'', topMatches: p.topMatches||[], overallScore: p.overallScore||0, ts: p.ts||'' };
   });
   try {
@@ -2333,7 +2332,7 @@ async function runClientInvestigation() {
     });
     resultsEl.innerHTML = html;
     await Promise.allSettled(results.map(function(s, i) {
-      return saveClientCluster(s, clusters[i], isolated, connections, srvVerMatch, clientClusterIds[i]);
+      return saveClientCluster(s, clusters[i], isolated, connections, srvVerMatch, clientClusterIds[i], enrichedBasket);
     }));
     // Clear basket after successful investigation
     saveClientBasket([]);
