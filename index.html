@@ -772,7 +772,7 @@ const ENTITY_RELATIONS = {
 // ─────────────────────────────────────────────
 // CONFIG
 // ─────────────────────────────────────────────
-const CLIENT_VERSION = '1.15.9';
+const CLIENT_VERSION = '1.15.10';
 const SERVER_URL = 'https://whos-behind-that-server-dev.onrender.com';
 const DAILY_LIMIT = 10;
 const CONTACT_EMAIL = 'contact@whosbehindthat.com'; // replace with real email
@@ -1981,50 +1981,37 @@ function openClientClusterFromHistory(idx) {
 
   let html = '';
 
-  // #3: Cluster ID prominent at top, above timeline
+  // Cluster ID at top
   html += '<div style="display:flex;align-items:center;gap:10px;margin-bottom:10px;flex-wrap:wrap">';
   html += '<a href="' + escHtml('https://haimglikman.github.io/whos-behind-that-client-dev/' + c.id) + '" style="font-family:var(--mono);font-size:11px;font-weight:700;color:var(--blue);background:var(--blue-dim);border:1px solid rgba(26,107,255,.2);border-radius:6px;padding:4px 12px;text-decoration:none">' + escHtml(c.id) + '</a>';
   const cDate = c.ts ? new Date(c.ts).toLocaleDateString('en-GB',{day:'2-digit',month:'2-digit',year:'numeric'}) : '';
   if (cDate) html += '<span style="font-size:10px;color:var(--text3)">' + cDate + '</span>';
   html += '</div>';
 
-  // Timeline + Legend
+  // Timeline
   html += renderClientTimeline(posts, [c.postIds||[]], isolated, postClusterMap, connections, true);
-  html += renderClientLegend(posts, [c.postIds||[]], isolated, postClusterMap, true);
 
   // Synopsis card
   html += '<div class="card" style="margin-bottom:10px">';
-  // Rename field
   html += '<div style="margin-bottom:10px">';
   html += '<div style="font-size:10px;font-weight:700;color:var(--text3);text-transform:uppercase;letter-spacing:.07em;margin-bottom:5px">Cluster name</div>';
   html += '<div style="display:flex;gap:8px;align-items:center">';
   html += '<input type="text" class="url-input" style="flex:1;font-size:12px;font-weight:600;color:var(--text);height:32px" id="client-cluster-name-hist" value="' + escHtml(c.clusterName||'') + '" />';
   html += '<button style="background:var(--blue);color:#fff;border:none;border-radius:8px;padding:6px 12px;font-size:11px;font-weight:700;cursor:pointer;font-family:var(--sans);white-space:nowrap" data-cid="' + escHtml(c.id) + '" onclick="renameClientCluster(this.dataset.cid,\'hist\')">Save</button>';
   html += '</div></div>';
-
-  // Synopsis
-  if (c.connectionType) html += '<div style="font-size:11px;color:var(--text3);font-style:italic;margin-bottom:6px">' + escHtml(c.connectionType) + '</div>';
-  html += '<p style="font-size:12px;line-height:1.7;color:var(--text2);margin-bottom:10px">' + escHtml(c.synopsis||'') + '</p>';
-  if (c.dominantEntity) html += '<div style="font-size:11px;color:var(--text3);font-weight:600;margin-bottom:8px">Serves: <span style="color:var(--text2)">' + escHtml(c.dominantEntity) + '</span></div>';
-
-  // #5: Frame and event — prominent, not tiny bottom text
   if (c.frame || c.event) {
-    html += '<div style="display:flex;flex-wrap:wrap;gap:8px;margin-bottom:8px">';
+    html += '<div style="display:flex;flex-wrap:wrap;gap:8px;margin-bottom:10px">';
     if (c.frame) html += '<div style="background:var(--bg);border:1px solid var(--border);border-radius:6px;padding:5px 10px"><div style="font-size:9px;font-weight:700;color:var(--text3);text-transform:uppercase;letter-spacing:.07em;margin-bottom:2px">Frame</div><div style="font-size:12px;color:var(--text)">' + escHtml(c.frame) + '</div></div>';
     if (c.event) html += '<div style="background:var(--bg);border:1px solid var(--border);border-radius:6px;padding:5px 10px"><div style="font-size:9px;font-weight:700;color:var(--text3);text-transform:uppercase;letter-spacing:.07em;margin-bottom:2px">Event</div><div style="font-size:12px;color:var(--text)">' + escHtml(c.event) + '</div></div>';
     html += '</div>';
   }
-
-  if (summaries.length > 0) {
-    html += '<div style="border-top:1px solid var(--border);padding-top:8px;margin-top:4px">';
-    html += '<div style="font-size:10px;font-weight:700;color:var(--text3);text-transform:uppercase;letter-spacing:.07em;margin-bottom:6px">Posts</div>';
-    summaries.forEach(function(s) {
-      if (!s) return;
-      html += '<div style="font-size:11px;color:var(--text2);padding:4px 0;border-top:1px solid var(--border);font-style:italic">' + escHtml(s) + '</div>';
-    });
-    html += '</div>';
-  }
+  if (c.connectionType) html += '<div style="font-size:10px;color:var(--text3);font-style:italic;margin-bottom:8px">' + escHtml(c.connectionType) + '</div>';
+  html += '<p style="font-size:12px;line-height:1.7;color:var(--text2);margin-bottom:10px">' + escHtml(c.synopsis||'') + '</p>';
+  if (c.dominantEntity) html += '<div style="font-size:11px;color:var(--text3);font-weight:600;margin-bottom:8px">Serves: <span style="color:var(--text2)">' + escHtml(c.dominantEntity) + '</span></div>';
   html += '</div>';
+
+  // Legend after synopsis
+  html += renderClientLegend(posts, [c.postIds||[]], isolated, postClusterMap, true);
 
   resultsEl.innerHTML = html;
 }
@@ -2237,11 +2224,16 @@ function renderClientLegend(basket, clusters, isolated, postClusterMap, presorte
     html += '<div style="font-size:10px;font-weight:700;color:var(--text3);margin-top:10px;margin-bottom:5px;text-transform:uppercase;letter-spacing:.06em">Omitted</div>';
     sorted.filter(function(p){ return isolated.includes(p.scanId); }).forEach(function(p) {
       const idx = sorted.indexOf(p) + 1;
-      html += '<div style="display:flex;align-items:center;gap:8px;padding:6px 0;border-top:1px solid var(--border);font-size:11px;flex-wrap:wrap">';
+      const secondary = (p.topMatches||[])[1] || '';
+      html += '<div style="padding:6px 0;border-top:1px solid var(--border)">';
+      html += '<div style="display:flex;align-items:center;gap:8px;font-size:11px;flex-wrap:wrap">';
       html += '<span style="display:inline-flex;align-items:center;justify-content:center;width:20px;height:20px;border-radius:50%;background:#f1efe8;border:1px solid #b4b2a9;font-size:9px;font-weight:700;color:#888780;flex-shrink:0">P' + idx + '</span>';
       html += '<span style="color:var(--text3)">' + escHtml((p.topMatches||[])[0] || p.overallLabel || '') + '</span>';
       html += '<span style="font-size:10px;color:var(--text3);font-style:italic">No connection</span>';
       if (p.url) html += '<a href="' + escHtml(p.url) + '" target="_blank" rel="noopener" style="font-size:10px;color:var(--blue);font-weight:700;text-decoration:none;margin-left:auto">↗ Go to post</a>';
+      html += '</div>';
+      if (secondary) html += '<div style="font-size:11px;color:var(--text3);margin-top:2px;margin-left:28px">Secondary: <span style="color:var(--text2)">' + escHtml(secondary) + '</span></div>';
+      if (p._summary) html += '<div style="font-size:11px;color:var(--text2);margin-top:3px;margin-left:28px;font-style:italic;line-height:1.5">' + escHtml(p._summary) + '</div>';
       html += '</div>';
     });
   }
@@ -2287,28 +2279,28 @@ async function runClientInvestigation() {
     const srvVerMatch = document.getElementById('srv-ver-label') ? document.getElementById('srv-ver-label').textContent.replace('srv v','') : '?';
     const clientClusterIds = results.map(function(){ return generateClientClusterId(srvVerMatch); });
 
-    // Timeline + Legend
-    html += renderClientTimeline(enrichedBasket, clusters, isolated, postClusterMap, connections);
-    html += renderClientLegend(enrichedBasket, clusters, isolated, postClusterMap);
+    // Cluster ID above timeline
+    clientClusterIds.forEach(function(cid) {
+      if (!cid) return;
+      html += '<div style="display:flex;align-items:center;gap:8px;margin-bottom:8px;flex-wrap:wrap">';
+      html += '<span style="font-family:var(--mono);font-size:11px;font-weight:700;color:var(--blue);background:var(--blue-dim);border:1px solid rgba(26,107,255,.2);border-radius:6px;padding:4px 12px">' + escHtml(cid) + '</span>';
+      html += '</div>';
+    });
 
-    // Synopsis cards — cluster ID at top, frame/event prominent
+    // Timeline
+    html += renderClientTimeline(enrichedBasket, clusters, isolated, postClusterMap, connections);
+
+    // Synopsis cards
     results.forEach(function(s, i) {
       const cid = clientClusterIds[i] || '';
-      const color = CLIENT_CLUSTER_COLORS[i % CLIENT_CLUSTER_COLORS.length];
       html += '<div class="card" style="margin-bottom:10px">';
-      // Cluster ID at top
-      if (cid) {
-        html += '<div style="display:flex;align-items:center;gap:8px;margin-bottom:10px;flex-wrap:wrap">';
-        html += '<span style="font-family:var(--mono);font-size:11px;font-weight:700;color:var(--blue);background:var(--blue-dim);border:1px solid rgba(26,107,255,.2);border-radius:6px;padding:4px 12px">' + escHtml(cid) + '</span>';
-        html += '</div>';
-      }
       // Rename field
       html += '<div style="margin-bottom:10px"><div style="font-size:10px;font-weight:700;color:var(--text3);text-transform:uppercase;letter-spacing:.07em;margin-bottom:5px">Cluster name</div>';
       html += '<div style="display:flex;gap:8px;align-items:center">';
       html += '<input type="text" class="url-input" style="flex:1;font-size:12px;font-weight:600;color:var(--text);height:32px" id="client-cluster-name-' + i + '" value="' + escHtml(s.clusterName||'Cluster '+(i+1)) + '" />';
       html += '<button style="background:var(--blue);color:#fff;border:none;border-radius:8px;padding:6px 12px;font-size:11px;font-weight:700;cursor:pointer;font-family:var(--sans);white-space:nowrap" data-cid="' + escHtml(cid) + '" data-idx="' + i + '" onclick="renameClientCluster(this.dataset.cid,this.dataset.idx)">Save</button>';
       html += '</div></div>';
-      // Frame + Event as prominent cards
+      // Frame + Event
       if (s.frame || s.event) {
         html += '<div style="display:flex;flex-wrap:wrap;gap:8px;margin-bottom:10px">';
         if (s.frame) html += '<div style="background:var(--bg);border:1px solid var(--border);border-radius:6px;padding:5px 10px"><div style="font-size:9px;font-weight:700;color:var(--text3);text-transform:uppercase;letter-spacing:.07em;margin-bottom:2px">Frame</div><div style="font-size:12px;color:var(--text)">' + escHtml(s.frame) + '</div></div>';
@@ -2318,18 +2310,12 @@ async function runClientInvestigation() {
       if (s.connectionType) html += '<div style="font-size:10px;color:var(--text3);font-style:italic;margin-bottom:8px">' + escHtml(s.connectionType) + '</div>';
       html += '<p style="font-size:12px;line-height:1.7;color:var(--text2);margin-bottom:8px">' + escHtml(s.synopsis||'') + '</p>';
       if (s.dominantEntity) html += '<div style="font-size:11px;color:var(--text3);font-weight:600;margin-bottom:8px">Serves: <span style="color:var(--text2)">' + escHtml(s.dominantEntity) + '</span></div>';
-      if (s.postSummaries && s.postSummaries.length > 0) {
-        html += '<div style="border-top:1px solid var(--border);padding-top:8px;margin-top:4px">';
-        html += '<div style="font-size:10px;font-weight:700;color:var(--text3);text-transform:uppercase;letter-spacing:.07em;margin-bottom:6px">Posts</div>';
-        (s.postIds||[]).forEach(function(scanId, pi) {
-          const summary = (s.postSummaries||[])[pi] || '';
-          if (!summary) return;
-          html += '<div style="font-size:11px;color:var(--text2);padding:4px 0;border-top:1px solid var(--border);font-style:italic">' + escHtml(summary) + '</div>';
-        });
-        html += '</div>';
-      }
+      // No post summaries here — they appear in the legend below
       html += '</div>';
     });
+
+    // Legend after synopsis
+    html += renderClientLegend(enrichedBasket, clusters, isolated, postClusterMap);
     resultsEl.innerHTML = html;
     await Promise.allSettled(results.map(function(s, i) {
       return saveClientCluster(s, clusters[i], isolated, connections, srvVerMatch, clientClusterIds[i], enrichedBasket);
