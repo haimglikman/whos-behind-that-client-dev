@@ -1,3 +1,9 @@
+### v1.15.10 (client-dev) | Server: v1.19.4 | Admin: v2.13.15
+- Omitted posts in legend now show secondary entity and summary, same as included posts
+- Render order: cluster ID → timeline → synopsis → legend
+- Cluster ID now shown between basket and timeline (above timeline) in live investigation
+- Post summaries removed from synopsis card — they already appear in the legend
+
 ### v1.15.9 (client-dev) | Server: v1.19.3 | Admin: v2.13.14
 - Same fix — posts array now built from basket ensuring cross-device reconstruction works correctly
 
