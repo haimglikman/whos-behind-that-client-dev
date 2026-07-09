@@ -1,3 +1,6 @@
+### v1.15.9 (client-dev) | Server: v1.19.3 | Admin: v2.13.14
+- Same fix — posts array now built from basket ensuring cross-device reconstruction works correctly
+
 ### v1.15.8 (client-dev) | Server: v1.19.3 | Admin: v2.13.13
 - Same fix — timeline and legend preserve postIds order when reopening clusters from history
 
