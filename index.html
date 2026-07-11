@@ -405,6 +405,7 @@ body{background:var(--bg);display:flex;flex-direction:column;min-height:100vh}
           <button id="clear-url-btn" class="btn btn-sm" onclick="resetAnalysis()" style="display:none;background:var(--bg2);color:var(--text3);border-color:var(--border)">✕ Clear</button>
         </div>
         <div id="result-post-text" style="display:none;background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:14px 16px;font-size:13px;color:var(--text2);line-height:1.7;font-weight:500;white-space:pre-wrap;word-break:break-word"></div>
+        <div id="result-video-note" style="display:none;font-size:11px;color:var(--text3);font-style:italic;padding:6px 10px;background:var(--bg2);border-radius:var(--radius-xs);margin-bottom:8px"></div>
 
         <!-- Overall score card -->
         <div class="card">
@@ -489,6 +490,7 @@ body{background:var(--bg);display:flex;flex-direction:column;min-height:100vh}
               <option value="x">X</option>
               <option value="instagram">Instagram</option>
               <option value="facebook">Facebook</option>
+              <option value="youtube">YouTube</option>
             </select>
           </div>
           <div style="flex:0 0 130px"><div style="font-size:10px;font-weight:700;color:var(--text3);text-transform:uppercase;letter-spacing:.07em;margin-bottom:4px">Date from</div><input type="date" class="url-input" style="height:32px;font-size:11px" id="cf-date-from" onchange="applyClientFilters()"/></div>
@@ -772,7 +774,7 @@ const ENTITY_RELATIONS = {
 // ─────────────────────────────────────────────
 // CONFIG
 // ─────────────────────────────────────────────
-const CLIENT_VERSION = '1.15.10';
+const CLIENT_VERSION = '1.15.11';
 const SERVER_URL = 'https://whos-behind-that-server-dev.onrender.com';
 const DAILY_LIMIT = 10;
 const CONTACT_EMAIL = 'contact@whosbehindthat.com'; // replace with real email
@@ -1095,6 +1097,7 @@ async function performServerAnalysis(url) {
   const data = await res.json();
   const finalUrl = data.url || url;
   const result = buildResult(data.analysis, data.post, entities);
+  if (data.post && data.post.videoNote) result.videoNote = data.post.videoNote;
   const entry = await saveToHistory(finalUrl, (data.post&&data.post.text)||'', result, null).catch(function(e){ console.warn('History save error:', e.message); });
   incrementScanCount();
   finishAnalysis(entry);
@@ -1149,6 +1152,10 @@ function showResults(url, d) {
   const clearBtn = document.getElementById('clear-url-btn');
   if (clearBtn) clearBtn.style.display = 'inline-flex';
   currentResult = Object.assign({url:url}, d);
+
+  // Video note (if article had embedded video with no transcript)
+  const noteEl = document.getElementById('result-video-note');
+  if (noteEl) { noteEl.textContent = d.videoNote || ''; noteEl.style.display = d.videoNote ? 'block' : 'none'; }
 
   // Dial
   const pct = d.overall.score||0;
@@ -1406,7 +1413,7 @@ async function saveToHistory(url, postText, result, srvVer) {
   if (dd) dd.dataset.built = '';
   // Reset source dropdown so new news domains appear immediately
   const ssel = document.getElementById('cf-platform');
-  if (ssel) { const cur = ssel.value; ssel.innerHTML = '<option value="">All</option><option value="x">X</option><option value="instagram">Instagram</option><option value="facebook">Facebook</option>'; if (cur) ssel.value = cur; }
+  if (ssel) { const cur = ssel.value; ssel.innerHTML = '<option value="">All</option><option value="x">X</option><option value="instagram">Instagram</option><option value="facebook">Facebook</option><option value="youtube">YouTube</option>'; if (cur) ssel.value = cur; }
   return entry;
 }
 
@@ -1597,7 +1604,7 @@ function applyClientFilters() {
         try { const d = new URL(e.url).hostname.replace(/^www\./,''); newsDomains[d] = getDomainDisplayName(e.url); } catch(err) {}
       }
     });
-    const staticOpts = '<option value="">All</option><option value="x">X</option><option value="instagram">Instagram</option><option value="facebook">Facebook</option>';
+    const staticOpts = '<option value="">All</option><option value="x">X</option><option value="instagram">Instagram</option><option value="facebook">Facebook</option><option value="youtube">YouTube</option>';
     const newsOpts = Object.keys(newsDomains).sort().map(function(d){ return '<option value="news:'+d+'">'+escHtml(newsDomains[d])+'</option>'; }).join('');
     ssel.innerHTML = staticOpts + (newsOpts ? '<optgroup label="News sites">' + newsOpts + '</optgroup>' : '');
     if (curVal) ssel.value = curVal;
