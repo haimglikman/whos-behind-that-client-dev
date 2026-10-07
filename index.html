@@ -3,7 +3,9 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>WBT - Client DEV</title>
+<title>Who's Behind That?</title>
+<link rel="icon" type="image/png" href="logo.png">
+<link rel="apple-touch-icon" href="logo.png">
   <meta name="description" content="AI-powered narrative intelligence tool. Uncover the hidden interests behind social media posts and news articles.">
   <meta property="og:title" content="Who's Behind That?">
   <meta property="og:description" content="AI-powered narrative intelligence tool. Uncover the hidden interests behind social media posts and news articles.">
@@ -246,6 +248,8 @@ body{background:var(--bg);display:flex;flex-direction:column;min-height:100vh}
 
 @media (max-width:640px) {
   .sidebar{display:none}
+  .nav{display:none}
+  .mobile-tabs{display:flex;position:fixed;top:52px;bottom:auto;border-top:none;border-bottom:1px solid var(--border)}
   .shell{padding-bottom:60px}
   .bottombar{display:none}
   .topbar-mobile-only{display:block}
@@ -254,18 +258,18 @@ body{background:var(--bg);display:flex;flex-direction:column;min-height:100vh}
   .mobile-tabs{
     display:flex;position:fixed;bottom:0;left:0;right:0;
     background:var(--surface);border-top:1px solid var(--border);
-    z-index:100;height:60px;
+    z-index:100;height:56px;
   }
   .mobile-tab{
     flex:1;display:flex;flex-direction:column;align-items:center;
-    justify-content:center;gap:3px;cursor:pointer;
-    font-size:10px;font-weight:700;color:var(--text3);
+    justify-content:center;gap:2px;cursor:pointer;
+    font-size:8.5px;font-weight:700;color:var(--text3);
     border:none;background:none;font-family:var(--sans);
-    padding:8px 4px;transition:color .15s;
+    padding:6px 2px;transition:color .15s;min-width:0;
   }
   .mobile-tab.active{color:var(--blue)}
-  .mobile-tab svg{width:20px;height:20px}
-  .main{padding:14px 16px;gap:10px}
+  .mobile-tab svg{width:18px;height:18px;flex-shrink:0}
+  .main{padding:14px 16px;gap:10px;padding-top:108px}
   .url-card{padding:12px 14px}
   .result-card{padding:12px 14px}
   .score-row{gap:10px}
@@ -467,6 +471,10 @@ body{background:var(--bg);display:flex;flex-direction:column;min-height:100vh}
             Actor research available after scan completes.
           </div>
         </div>
+        <div class="card" id="comments-card" style="display:none">
+          <div class="card-label">Comment alignment</div>
+          <div id="comments-body"></div>
+        </div>
       </div>
     </div>
   </div>
@@ -490,6 +498,8 @@ body{background:var(--bg);display:flex;flex-direction:column;min-height:100vh}
               <option value="x">X</option>
               <option value="instagram">Instagram</option>
               <option value="facebook">Facebook</option>
+              <option value="tiktok">TikTok</option>
+              <option value="telegram">Telegram</option>
               <option value="youtube">YouTube</option>
             </select>
           </div>
@@ -597,6 +607,13 @@ body{background:var(--bg);display:flex;flex-direction:column;min-height:100vh}
           <p style="margin-top:8px"><strong>Data retention:</strong> Scan data is retained for service operation purposes. You may request deletion by contacting us.</p>
           <p style="margin-top:8px"><strong>Third parties:</strong> Post text is sent to Anthropic's Claude API for analysis. Anthropic's privacy policy applies to that processing. No data is shared with any other third party.</p>
           <p style="margin-top:8px"><strong>No cookies:</strong> <em>Who's Behind That?</em> does not use cookies. It relies on browser local storage only, which stays on your device and is not used for tracking across other sites.</p>
+        </div>
+      </div>
+
+      <div class="about-section">
+        <h2>Deployed versions</h2>
+        <div id="client-deployed-versions">
+          <div style="font-size:12px;color:var(--text3)">Loading...</div>
         </div>
       </div>
 
@@ -774,8 +791,8 @@ const ENTITY_RELATIONS = {
 // ─────────────────────────────────────────────
 // CONFIG
 // ─────────────────────────────────────────────
-const CLIENT_VERSION = '1.15.11';
-const SERVER_URL = 'https://whos-behind-that-server-dev.onrender.com';
+const CLIENT_VERSION = '1.22.0';
+const SERVER_URL = 'https://whos-behind-that-server.onrender.com';
 const DAILY_LIMIT = 10;
 const CONTACT_EMAIL = 'contact@whosbehindthat.com'; // replace with real email
 
@@ -848,6 +865,7 @@ function showPage(name, el) {
   if (name === 'investigate') { updateClientInvestigateUI(); }
   if (name === 'clusters') { renderClientClusters(); }
   if (name === 'faq') { renderClientFaq(); }
+  if (name === 'about') { renderClientDeployedVersions(); }
   if (history.state && history.state.page !== name) {
     history.pushState({ page: name }, '', '#' + name);
   }
@@ -868,6 +886,7 @@ window.addEventListener('popstate', function(e) {
   if (name === 'investigate') { updateClientInvestigateUI(); }
   if (name === 'clusters') { renderClientClusters(); }
   if (name === 'faq') { renderClientFaq(); }
+  if (name === 'about') { renderClientDeployedVersions(); }
   setMobileTab(name);
 });
 
@@ -897,13 +916,22 @@ function escHtml(s) { return (s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').
 function detectPlatform(url) {
   if (/x\.com|twitter\.com/i.test(url)) return 'x';
   if (/instagram\.com/i.test(url)) return 'instagram';
-  if (/facebook\.com|fb\.com/i.test(url)) return 'facebook';
+  if (/facebook\.com|fb\.com|fb\.watch/i.test(url)) return 'facebook';
+  if (/tiktok\.com/i.test(url)) return 'tiktok';
+  if (/(^|\/\/|\.)(t|telegram)\.me\//i.test(url)) return 'telegram';
+  if (/youtube\.com|youtu\.be/i.test(url)) return 'youtube';
   try {
     const domain = new URL(url).hostname.replace(/^www\./, '');
     const newsDomains = ['ynet.co.il','ynetnews.com','haaretz.co.il','haaretz.com','israelhayom.co.il','israelhayom.com','inn.co.il','arutzsheva.co.il','mako.co.il','n12.co.il','kan.org.il','walla.co.il','maariv.co.il','timesofisrael.com','jpost.com','jerusalempost.com','972mag.com','calcalist.co.il','globes.co.il','themarker.com','channel14.co.il','i24news.tv','bbc.com','bbc.co.uk','reuters.com','apnews.com','nytimes.com','washingtonpost.com','theguardian.com','aljazeera.com','aljazeera.net','cnn.com','foxnews.com','wsj.com','ft.com','economist.com','middleeasteye.net','almonitor.com','foreignpolicy.com','tabletmag.com','memri.org','le-monde.fr','lemonde.fr','derspiegel.de','spiegel.de','atlanticcouncil.org','independent.co.uk','telegraph.co.uk','nbcnews.com','apnews.com','axios.com','bloomberg.com','newsweek.com','vox.com','politico.com','thehill.com'];
     if (newsDomains.includes(domain)) return 'news';
+    const p = new URL(url).pathname;
+    if (p && p !== '/') return 'news';
   } catch(e) {}
   return 'unknown';
+}
+// Older scans may be stored as 'unknown' — derive from URL
+function effectivePlatform(e) {
+  return (e.platform && e.platform !== 'unknown') ? e.platform : detectPlatform(e.url || '');
 }
 function alignmentColor(pct) {
   if (pct >= 81) return '#e8603c';
@@ -919,6 +947,27 @@ function extractHandle(url, post) {
   if (post && post.author) return post.author;
   return null;
 }
+// ─── ENTITY MANAGEMENT ───
+let _cachedEntities = null;
+
+function getEntities() {
+  return _cachedEntities || DEFAULT_ENTITIES;
+}
+
+async function loadEntitiesFromServer() {
+  try {
+    const res = await fetch(SERVER_URL + '/entities/list');
+    if (!res.ok) { console.warn('entities/list failed:', res.status); return; }
+    const data = await res.json();
+    if (data.success && Array.isArray(data.entities) && data.entities.length > 0) {
+      _cachedEntities = data.entities;
+      console.log('Entities loaded from server: ' + data.entities.length + ' entities, v' + data.version);
+    }
+  } catch(e) {
+    console.warn('Could not load entities from server:', e.message);
+  }
+}
+
 function generateScanId(srvVer) {
   const now = new Date();
   const date = now.getFullYear().toString() + String(now.getMonth()+1).padStart(2,'0') + String(now.getDate()).padStart(2,'0');
@@ -1050,7 +1099,7 @@ async function analyzeWithManualText() {
   showLoader();
   document.getElementById('manual-fallback').style.display = 'none';
   try {
-    const entities = DEFAULT_ENTITIES;
+    const entities = getEntities();
     const steps = document.getElementById('loader-steps').querySelectorAll('.loader-step');
     const adv = function(i){ if(steps[i]){steps[i].classList.remove('active');steps[i].classList.add('done');steps[i].textContent='✓ '+LOAD_STEPS[i];} if(steps[i+1])steps[i+1].classList.add('active'); };
     adv(0); await delay(300); adv(1); await delay(300); adv(2);
@@ -1062,9 +1111,14 @@ async function analyzeWithManualText() {
     const analysis = await res.json();
     adv(3); await delay(300); adv(4); await delay(300); adv(5); await delay(200);
     const result = buildResult(analysis, {text: postText}, entities);
-    const entry = await saveToHistory(url, postText, result, null);
+    const at = analysis._tokens || {};
+    const entry = await saveToHistory(url, postText, result, null, {
+      inputTokens: at.input, outputTokens: at.output,
+      jevTokens: (analysis.triage && analysis.triage.tokens) || 0, models: analysis.models || null
+    });
     incrementScanCount();
     finishAnalysis(entry);
+    loadCommentAlignment(url, postText);
   } catch(e) {
     document.getElementById('loader').classList.remove('active');
     document.getElementById('manual-fallback').style.display = 'block';
@@ -1084,7 +1138,7 @@ function finishAnalysis(entry) {
 }
 
 async function performServerAnalysis(url) {
-  const entities = DEFAULT_ENTITIES;
+  const entities = getEntities();
   const steps = document.getElementById('loader-steps').querySelectorAll('.loader-step');
   const adv = function(i){ if(steps[i]){steps[i].classList.remove('active');steps[i].classList.add('done');steps[i].textContent='✓ '+LOAD_STEPS[i];} if(steps[i+1])steps[i+1].classList.add('active'); };
   adv(0);
@@ -1098,9 +1152,13 @@ async function performServerAnalysis(url) {
   const finalUrl = data.url || url;
   const result = buildResult(data.analysis, data.post, entities);
   if (data.post && data.post.videoNote) result.videoNote = data.post.videoNote;
-  const entry = await saveToHistory(finalUrl, (data.post&&data.post.text)||'', result, null).catch(function(e){ console.warn('History save error:', e.message); });
+  const entry = await saveToHistory(finalUrl, (data.post&&data.post.text)||'', result, null, {
+    inputTokens: data.inputTokens, outputTokens: data.outputTokens,
+    jevTokens: data.jevTokens || 0, models: data.models || (data.analysis && data.analysis.models) || null
+  }).catch(function(e){ console.warn('History save error:', e.message); });
   incrementScanCount();
   finishAnalysis(entry);
+  loadCommentAlignment(finalUrl, (data.post && data.post.text) || '');
 }
 
 function buildResult(analysis, post, entities) {
@@ -1110,9 +1168,19 @@ function buildResult(analysis, post, entities) {
       secondary: m.alignment==='secondary'
     });
   }).sort(function(a,b){return b.pct-a.pct;});
-  const above = rawMatches.filter(function(m){return m.pct>=85;});
-  const primary = above.filter(function(m){return !m.secondary;}).slice(0,3);
-  const secondary = above.filter(function(m){return m.secondary;}).slice(0,2);
+  // Server 2.x (response has 'triage'): the judge's verdict decides — primary ≥60%, secondary ≥50%.
+  // Server 1.x: legacy 85% threshold.
+  const isV2 = !!(analysis && analysis.triage !== undefined);
+  let primary, secondary;
+  if (isV2) {
+    primary = rawMatches.filter(function(m){return m.alignment==='primary' && m.pct>=60;}).slice(0,3);
+    secondary = rawMatches.filter(function(m){return m.alignment==='secondary' && m.pct>=50;}).slice(0,2);
+  } else {
+    const above = rawMatches.filter(function(m){return m.pct>=85;});
+    primary = above.filter(function(m){return !m.secondary;}).slice(0,3);
+    secondary = above.filter(function(m){return m.secondary;}).slice(0,2);
+  }
+  const ruleText = isV2 ? "by the judge's verdict" : 'above 85%';
   const matches = primary.concat(secondary);
   const topPrimary = primary[0]||null;
   const topMatch = topPrimary ? topPrimary.pct : 0;
@@ -1127,13 +1195,74 @@ function buildResult(analysis, post, entities) {
       score: topMatch,
       label: topNames||'No strong alignment detected',
       desc: matches.length>0
-        ? 'Claude AI found '+primary.length+' primary and '+secondary.length+' secondary alignment'+(secondary.length!==1?'s':'')+' above 85% across '+entities.length+' entities. Strongest: '+(topName||'—')+' at '+topMatch+'%.'
-        : 'Claude AI found no entity alignment above 85% across '+entities.length+' entities.'
-    }
+        ? 'Claude AI found '+primary.length+' primary and '+secondary.length+' secondary alignment'+(secondary.length!==1?'s':'')+' '+ruleText+' across '+entities.length+' entities. Strongest: '+(topName||'—')+' at '+topMatch+'%.'
+        : 'Claude AI found no entity alignment '+ruleText+' across '+entities.length+' entities.'
+    },
+    noAlignmentText: isV2 ? 'No meaningful entity alignment detected.' : 'No entity alignment above 85% detected.'
   };
 }
 
+// ─── COMMENT ALIGNMENT (rough check — percentages only, server 2.4+) ───
+let _commentsReq = 0;
+// Which posts to check. X, Facebook and Instagram are login-walled; everything else is tried.
+function commentPlatform(url) {
+  const u = String(url || '');
+  if (!/^https?:\/\//i.test(u)) return null;
+  if (/(^|\/\/|\.)(x|twitter|facebook|fb|instagram)\.com\//i.test(u) || /fb\.watch\//i.test(u)) return null;
+  if (/(youtube\.com|youtu\.be)\//i.test(u)) return 'youtube';
+  if (/tiktok\.com\//i.test(u)) return 'tiktok';
+  if (/(^|\/\/|\.)(t|telegram)\.me\//i.test(u)) return 'telegram';
+  return 'news';
+}
+function hideCommentAlignment() {
+  _commentsReq++;   // cancels any request still running for a previous post
+  const card = document.getElementById('comments-card');
+  if (card) card.style.display = 'none';
+}
+async function loadCommentAlignment(url, postText) {
+  const card = document.getElementById('comments-card'), body = document.getElementById('comments-body');
+  if (!card || !body) return;
+  const platform = commentPlatform(url);
+  if (!platform) { card.style.display = 'none'; return; }
+  const eager = platform !== 'news';   // most articles have no comments — show the card only when there's something to show
+  const req = ++_commentsReq;
+  const server = (typeof getServerUrl === 'function') ? getServerUrl() : SERVER_URL;
+  if (eager) { card.style.display = ''; body.innerHTML = '<div style="font-size:12px;color:var(--text3)">Reading comments…</div>'; }
+  try {
+    const r = await fetch(server + '/comments/analyze', {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ url: url, entities: getEntities(), postText: String(postText || '').slice(0, 2000) })
+    });
+    if (req !== _commentsReq) return;
+    if (r.status === 404) { card.style.display = 'none'; return; }   // older server without comment analysis
+    const d = await r.json();
+    if (req !== _commentsReq) return;
+    if (!r.ok || !d.success) throw new Error(d.error || ('HTTP ' + r.status));
+    if (!d.available) {
+      if (d.silent || !d.reason) { card.style.display = 'none'; return; }
+      card.style.display = '';
+      body.innerHTML = '<div style="font-size:12px;color:var(--text3)">' + escHtml(d.reason) + '</div>';
+      return;
+    }
+    const rows = (d.breakdown || []).concat([{ name: 'Not affiliated', pct: d.unaffiliatedPct, muted: true }]);
+    card.style.display = '';
+    body.innerHTML = rows.map(function(row) {
+      return '<div style="display:flex;align-items:center;gap:10px;margin-bottom:6px">' +
+        '<div style="flex:0 0 42%;font-size:12px;color:' + (row.muted ? 'var(--text3)' : 'var(--text)') + ';overflow:hidden;text-overflow:ellipsis;white-space:nowrap">' + escHtml(row.name) + '</div>' +
+        '<div style="flex:1;height:6px;background:var(--bg2);border-radius:99px;overflow:hidden"><div style="width:' + Math.max(0, Math.min(100, row.pct)) + '%;height:100%;background:' + (row.muted ? 'var(--text3)' : 'var(--blue)') + '"></div></div>' +
+        '<div style="flex:0 0 40px;text-align:right;font-family:var(--mono);font-size:12px;font-weight:700;color:' + (row.muted ? 'var(--text3)' : 'var(--text)') + '">' + row.pct + '%</div>' +
+      '</div>';
+    }).join('') +
+    '<div style="font-size:10px;color:var(--text3);margin-top:8px">Based on ' + d.sampled + ' comments' + (d.source ? ' (' + escHtml(d.source) + ')' : '') + '. A rough check, not an in-depth analysis.</div>';
+  } catch (e) {
+    if (req !== _commentsReq) return;
+    if (!eager) { card.style.display = 'none'; return; }
+    body.innerHTML = '<div style="font-size:12px;color:var(--text3)">Could not analyze the comments.</div>';
+  }
+}
+
 function showResults(url, d) {
+  hideCommentAlignment();
   document.getElementById('loader').classList.remove('active');
   document.getElementById('results').classList.add('active');
   document.getElementById('results').classList.add('active');
@@ -1209,7 +1338,7 @@ function showResults(url, d) {
   }
 
   if (primary.length===0 && secondary.length===0) {
-    primaryEl.innerHTML = '<div class="no-alignment">No entity alignment above 85% detected.</div>';
+    primaryEl.innerHTML = '<div class="no-alignment">' + escHtml(d.noAlignmentText || 'No entity alignment above 85% detected.') + '</div>';
     secondaryEl.innerHTML = '';
   } else {
     primaryEl.innerHTML = primary.length>0
@@ -1259,7 +1388,7 @@ async function checkConvergentInterest(postText, primaryMatches) {
   try {
     const res = await fetch(SERVER_URL + '/convergent-interest', {
       method:'POST', headers:{'Content-Type':'application/json'},
-      body: JSON.stringify({ postText, primaryMatches, allEntities: DEFAULT_ENTITIES })
+      body: JSON.stringify({ postText, primaryMatches, allEntities: getEntities() })
     });
     if (!res.ok) return;
     const data = await res.json();
@@ -1339,12 +1468,21 @@ function renderActorCard(container, actor, publication) {
     ? '<div class="actor-handles">' + actor.handles.map(function(h){ return '<span class="actor-handle-tag">' + escHtml(h) + '</span>'; }).join('') + '</div>'
     : '';
   var pubHtml = publication ? renderPublicationCard(publication) : '';
+  var botProb = actor.botProbability;
+  var botUnknown = botProb === 'Unknown' || botProb === null || botProb === undefined;
+  var botPct = botUnknown ? null : parseInt(botProb);
+  var botColor = botPct === null ? 'var(--text3)' : botPct >= 70 ? '#d9534f' : botPct >= 40 ? '#f0ad4e' : '#5cb85c';
+  var botLabel = botPct === null ? 'Unknown' : botPct + '%';
   container.innerHTML =
     '<div style="margin-bottom:6px">' +
-      '<div class="actor-name">' + escHtml(actor.name||actor.handle||'Unknown') + '</div>' +
+      '<div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap">' +
+        '<div class="actor-name">' + escHtml(actor.name||actor.handle||'Unknown') + '</div>' +
+        '<div style="display:inline-flex;align-items:center;gap:5px;background:var(--bg2);border:1px solid var(--border);border-radius:99px;padding:3px 10px;font-size:10px;font-weight:700;color:' + botColor + '">🤖 Bot probability: ' + escHtml(botLabel) + '</div>' +
+      '</div>' +
       (actor.location ? '<div class="actor-location">📍 ' + escHtml(actor.location) + '</div>' : '') +
     '</div>' +
     '<div class="actor-bio">' + escHtml(stripCitations(actor.bio||'No biographical information found.')) + '</div>' +
+    (actor.botReasoning ? '<div style="font-size:10px;color:var(--text3);margin-top:6px;font-style:italic;line-height:1.5">' + escHtml(actor.botReasoning) + '</div>' : '') +
     handlesHtml + pubHtml;
 }
 
@@ -1374,7 +1512,7 @@ async function fetchSrvVersion() {
   } catch(e) { return '?'; }
 }
 
-async function saveToHistory(url, postText, result, srvVer) {
+async function saveToHistory(url, postText, result, srvVer, meta) {
   const sv = srvVer || await fetchSrvVersion().catch(function(){ return '?'; });
   const scanId = generateScanId(sv);
   const platform = detectPlatform(url);
@@ -1393,7 +1531,11 @@ async function saveToHistory(url, postText, result, srvVer) {
     appVersion: CLIENT_VERSION,
     serverVersion: sv,
     comment: '',
-    fullResult: result
+    fullResult: result,
+    inputTokens: (meta && meta.inputTokens) || 0,
+    outputTokens: (meta && meta.outputTokens) || 0,
+    jevTokens: (meta && meta.jevTokens) || 0,
+    models: (meta && meta.models) || null
   };
   const h = getHistory().filter(function(e){
     const tsMin = e.ts ? e.ts.slice(0,16) : '';
@@ -1413,7 +1555,7 @@ async function saveToHistory(url, postText, result, srvVer) {
   if (dd) dd.dataset.built = '';
   // Reset source dropdown so new news domains appear immediately
   const ssel = document.getElementById('cf-platform');
-  if (ssel) { const cur = ssel.value; ssel.innerHTML = '<option value="">All</option><option value="x">X</option><option value="instagram">Instagram</option><option value="facebook">Facebook</option><option value="youtube">YouTube</option>'; if (cur) ssel.value = cur; }
+  if (ssel) { const cur = ssel.value; ssel.innerHTML = '<option value="">All</option><option value="x">X</option><option value="instagram">Instagram</option><option value="facebook">Facebook</option><option value="tiktok">TikTok</option><option value="telegram">Telegram</option><option value="youtube">YouTube</option>'; if (cur) ssel.value = cur; }
   return entry;
 }
 
@@ -1514,12 +1656,12 @@ function renderHistory() {
     list.innerHTML = '<div class="no-history">No scans yet. Analyze a post to see it here.</div>';
     return;
   }
-  const platformIcon = {x:'𝕏', instagram:'📷', facebook:'f', news:'📰', unknown:'🔗'};
+  const platformIcon = {x:'𝕏', instagram:'📷', facebook:'f', tiktok:'♪', youtube:'▶', telegram:'✈', news:'📰', unknown:'🔗'};
   list.innerHTML = h.map(function(e) {
     const d = new Date(e.ts);
     const dateStr = d.toLocaleDateString('en-GB',{day:'2-digit',month:'2-digit',year:'numeric'}) + ' ' + d.toLocaleTimeString([],{hour:'2-digit',minute:'2-digit'});
     const scanId = e.scanId || ('WBT-legacy-' + e.id);
-    const icon = platformIcon[e.platform||'unknown']||'🔗';
+    const icon = platformIcon[effectivePlatform(e)]||'🔗';
     if (e.failed) {
       return '<div class="history-item" style="border-color:rgba(239,68,68,.25);background:rgba(239,68,68,.03)">' +
         '<div style="display:flex;align-items:center;gap:6px;margin-bottom:4px">' +
@@ -1600,11 +1742,11 @@ function applyClientFilters() {
     const curVal = ssel.value;
     const newsDomains = {};
     h.forEach(function(e) {
-      if (e.platform === 'news' && e.url) {
+      if (effectivePlatform(e) === 'news' && e.url) {
         try { const d = new URL(e.url).hostname.replace(/^www\./,''); newsDomains[d] = getDomainDisplayName(e.url); } catch(err) {}
       }
     });
-    const staticOpts = '<option value="">All</option><option value="x">X</option><option value="instagram">Instagram</option><option value="facebook">Facebook</option><option value="youtube">YouTube</option>';
+    const staticOpts = '<option value="">All</option><option value="x">X</option><option value="instagram">Instagram</option><option value="facebook">Facebook</option><option value="tiktok">TikTok</option><option value="telegram">Telegram</option><option value="youtube">YouTube</option>';
     const newsOpts = Object.keys(newsDomains).sort().map(function(d){ return '<option value="news:'+d+'">'+escHtml(newsDomains[d])+'</option>'; }).join('');
     ssel.innerHTML = staticOpts + (newsOpts ? '<optgroup label="News sites">' + newsOpts + '</optgroup>' : '');
     if (curVal) ssel.value = curVal;
@@ -1633,7 +1775,7 @@ function applyClientFilters() {
         const domain = source.slice(5);
         try { const d = new URL(e.url||'').hostname.replace(/^www\./,''); if (d !== domain) return false; } catch(err) { return false; }
       } else {
-        if ((e.platform||'unknown') !== source) return false;
+        if (effectivePlatform(e) !== source) return false;
       }
     }
     if (dateFrom && new Date(e.ts) < new Date(dateFrom)) return false;
@@ -1694,13 +1836,13 @@ function clearClientFilters() {
 function renderClientHistoryList(entries) {
   const list = document.getElementById('history-list');
   if (!entries || entries.length === 0) { list.innerHTML = '<div class="no-history">No scans match your filters.</div>'; return; }
-  const platformIcon = {x:'𝕏', instagram:'📷', facebook:'f', news:'📰', unknown:'🔗'};
+  const platformIcon = {x:'𝕏', instagram:'📷', facebook:'f', tiktok:'♪', youtube:'▶', telegram:'✈', news:'📰', unknown:'🔗'};
   const h = getHistory();
   list.innerHTML = entries.map(function(e) {
     const d = new Date(e.ts);
     const dateStr = d.toLocaleDateString('en-GB',{day:'2-digit',month:'2-digit',year:'numeric'}) + ' ' + d.toLocaleTimeString([],{hour:'2-digit',minute:'2-digit'});
     const scanId = e.scanId || ('WBT-legacy-' + e.id);
-    const icon = platformIcon[e.platform||'unknown']||'🔗';
+    const icon = platformIcon[effectivePlatform(e)]||'🔗';
     if (e.failed) {
       return '<div class="history-item" style="border-color:rgba(239,68,68,.25);background:rgba(239,68,68,.03)">' +
         '<div style="display:flex;align-items:center;gap:6px;margin-bottom:4px"><span>' + icon + '</span><span class="scan-id">' + escHtml(scanId) + '</span><span style="font-size:9px;color:var(--red);font-weight:700;text-transform:uppercase;letter-spacing:.06em;margin-left:4px">Failed</span></div>' +
@@ -1922,6 +2064,52 @@ async function renderClientFaq() {
   }
 }
 
+async function renderClientDeployedVersions() {
+  const el = document.getElementById('client-deployed-versions');
+  if (!el) return;
+  const fmt = function(ts) {
+    if (!ts) return '—';
+    return new Date(ts).toLocaleDateString('en-GB',{day:'2-digit',month:'2-digit',year:'numeric'});
+  };
+  function versionCard(label, version, timestamp) {
+    return '<div style="background:var(--surface);border:1px solid var(--border);border-radius:8px;padding:10px 12px">' +
+      '<div style="font-size:10px;font-weight:700;color:var(--text3);text-transform:uppercase;letter-spacing:.07em;margin-bottom:4px">' + escHtml(label) + '</div>' +
+      '<div style="font-family:var(--mono);font-size:12px;font-weight:700;color:var(--blue);margin-bottom:2px">v' + escHtml(version||'—') + '</div>' +
+      '<div style="font-size:10px;color:var(--text3)">' + fmt(timestamp) + '</div>' +
+    '</div>';
+  }
+
+  const topCards = [];
+  const promptCards = [];
+
+  topCards.push(versionCard('App', CLIENT_VERSION, null));
+  try {
+    const healthRes = await fetch(SERVER_URL + '/');
+    if (healthRes.ok) {
+      const h = await healthRes.json();
+      topCards.push(versionCard('Server', h.version, null));
+    }
+    const entRes = await fetch(SERVER_URL + '/entities/list');
+    if (entRes.ok) {
+      const ed = await entRes.json();
+      if (ed.success) topCards.push(versionCard('Entities', ed.version, ed.updatedAt));
+    }
+    const promptRes = await fetch(SERVER_URL + '/prompts/list');
+    if (promptRes.ok) {
+      const pd = await promptRes.json();
+      const names = { scan:'Scan', coherence:'Coherence', connection:'Connection', synopsis:'Synopsis', actor:'Actor', convergent:'Convergent Interest' };
+      (pd.prompts || []).forEach(function(p) {
+        promptCards.push(versionCard(names[p.name]||p.name, p.version, p.created_at));
+      });
+    }
+    el.innerHTML =
+      '<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(160px,1fr));gap:8px;margin-bottom:12px">' + topCards.join('') + '</div>' +
+      (promptCards.length ? '<div style="font-size:10px;font-weight:700;color:var(--text3);text-transform:uppercase;letter-spacing:.07em;margin-bottom:6px">Prompts</div><div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(140px,1fr));gap:8px">' + promptCards.join('') + '</div>' : '');
+  } catch(e) {
+    el.innerHTML = '<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(160px,1fr));gap:8px">' + topCards.join('') + '</div><div style="font-size:11px;color:var(--text3);margin-top:8px">Could not reach server.</div>';
+  }
+}
+
 function renderClientClusters() {
   const el = document.getElementById('client-clusters-list');
   if (!el) return;
@@ -1990,7 +2178,7 @@ function openClientClusterFromHistory(idx) {
 
   // Cluster ID at top
   html += '<div style="display:flex;align-items:center;gap:10px;margin-bottom:10px;flex-wrap:wrap">';
-  html += '<a href="' + escHtml('https://haimglikman.github.io/whos-behind-that-client-dev/' + c.id) + '" style="font-family:var(--mono);font-size:11px;font-weight:700;color:var(--blue);background:var(--blue-dim);border:1px solid rgba(26,107,255,.2);border-radius:6px;padding:4px 12px;text-decoration:none">' + escHtml(c.id) + '</a>';
+  html += '<span style="font-family:var(--mono);font-size:11px;font-weight:700;color:var(--blue);background:var(--blue-dim);border:1px solid rgba(26,107,255,.2);border-radius:6px;padding:4px 12px;text-decoration:none">' + escHtml(c.id) + '</span>';
   const cDate = c.ts ? new Date(c.ts).toLocaleDateString('en-GB',{day:'2-digit',month:'2-digit',year:'numeric'}) : '';
   if (cDate) html += '<span style="font-size:10px;color:var(--text3)">' + cDate + '</span>';
   html += '</div>';
@@ -2387,6 +2575,13 @@ window.addEventListener('DOMContentLoaded', function() {
   }
   history.replaceState({ page: initPage }, '', '#' + initPage);
   startWarmup();
+  // Register client version with server for monitoring
+  fetch(SERVER_URL + '/client/register', {
+    method: 'POST', headers: {'Content-Type':'application/json'},
+    body: JSON.stringify({ deviceId: getDeviceId(), clientVersion: CLIENT_VERSION })
+  }).catch(function(){});
+  // Load entities from server on startup
+  loadEntitiesFromServer();
   // Close entity dropdown on outside click
   document.addEventListener('click', function(e) {
     const dd = document.getElementById('cf-entity-dropdown');
@@ -2474,11 +2669,11 @@ function setMobileTab(name) {
     History
   </button>
   <button class="mobile-tab" id="mtab-investigate" onclick="showPage('investigate',document.getElementById('nav-investigate'));setMobileTab('investigate')">
-    <svg viewBox="0 0 24 24" fill="none"><circle cx="8" cy="12" r="2.5" stroke="currentColor" stroke-width="1.8"/><circle cx="16" cy="7" r="2.5" stroke="currentColor" stroke-width="1.8"/><circle cx="16" cy="17" r="2.5" stroke="currentColor" stroke-width="1.8"/><line x1="10.2" y1="10.8" x2="14" y2="8.2" stroke="currentColor" stroke-width="1.5"/><line x1="10.2" y1="13.2" x2="14" y2="15.8" stroke="currentColor" stroke-width="1.5"/></svg>
+    <svg viewBox="0 0 24 24" fill="none"><circle cx="12" cy="12" r="8" stroke="currentColor" stroke-width="1.8"/><line x1="12" y1="4" x2="12" y2="7" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/><line x1="12" y1="17" x2="12" y2="20" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/><line x1="4" y1="12" x2="7" y2="12" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/><line x1="17" y1="12" x2="20" y2="12" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/><circle cx="12" cy="12" r="2" fill="currentColor"/></svg>
     Investigate
   </button>
   <button class="mobile-tab" id="mtab-clusters" onclick="showPage('clusters',document.getElementById('nav-clusters'));setMobileTab('clusters')">
-    <svg viewBox="0 0 24 24" fill="none"><circle cx="5" cy="12" r="3" stroke="currentColor" stroke-width="1.8"/><circle cx="19" cy="6" r="3" stroke="currentColor" stroke-width="1.8"/><circle cx="19" cy="18" r="3" stroke="currentColor" stroke-width="1.8"/><line x1="7.8" y1="10.5" x2="16.2" y2="7.5" stroke="currentColor" stroke-width="1.5"/><line x1="7.8" y1="13.5" x2="16.2" y2="16.5" stroke="currentColor" stroke-width="1.5"/></svg>
+    <svg viewBox="0 0 24 24" fill="none"><circle cx="8" cy="12" r="5.5" stroke="currentColor" stroke-width="1.8"/><circle cx="16" cy="12" r="5.5" stroke="currentColor" stroke-width="1.8"/></svg>
     Clusters
   </button>
   <button class="mobile-tab" id="mtab-faq" onclick="showPage('faq',document.getElementById('nav-faq'));setMobileTab('faq')">
